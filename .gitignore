@@ -18,8 +18,8 @@ secrataContainer/libraries/wasm-jit/Source/Programs/wavm
 appbase_example
 *.bc
 secrataContainer/contracts/secrataContainer/secrataContainer.s
-secrataContainer/contracts/secrataContainer/secrataContainer.wasm
-secrataContainer/contracts/secrataContainer/secrataContainer.wast
-secrataContainer/contracts/secrataContainer/secrataContainer.wast.hpp
+secrataContainer/contracts/**/*.wasm
+secrataContainer/contracts/**/*.wast
+secrataContainer/contracts/**/*.wast.hpp
 secrataContainer/contracts/libc++/upstream/test/std/experimental/filesystem/Inputs/static_test_env/bad_symlink
 secrataContainer/externals/binaryen/test/emscripten/system/include/libc/bits

@@ -111,6 +111,10 @@ namespace secrataContainer {
         eosio_assert(workspaceExists(guid),
                      "The specified workspace does not exist");
 
+        eosio_assert(userIsMemberOfWorkspace(invitee, guid),
+                     "You are not a member of the workspace");
+
+
         membership_index memberships(_self, _self);
 
         // Get any existing Membership record for the invitee.

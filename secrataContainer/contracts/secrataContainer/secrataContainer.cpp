@@ -49,14 +49,18 @@ namespace secrataContainer {
 
     void container::update(account_name user, uint64_t guid, string workspaceDescription) {
 
-        eosio_assert(!workspaceExists(guid), "A Workspace with the specified GUID already exists");
+        eosio_assert(workspaceExists(guid), "The specified workspace does not exist");
 
         eosio_assert(userIsMemberOfWorkspace(user, guid, true),
                      "You are not a member of the workspace");
 
         workspace_index workspaces(_self, guid);
 
-        // TODO - Implement this method
+        auto workspaceItr = workspaces.begin();
+
+        workspaces.modify(workspaceItr, user, [&](auto& w){
+            w.description = workspaceDescription;
+        });
     }
 
     // -------- Membership --------
@@ -112,7 +116,6 @@ namespace secrataContainer {
 
         eosio_assert(userIsMemberOfWorkspace(invitee, guid, false),
                      "You are not a member of the workspace");
-
 
         membership_index memberships(_self, guid);
 

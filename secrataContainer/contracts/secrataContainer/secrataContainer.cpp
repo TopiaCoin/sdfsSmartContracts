@@ -49,10 +49,14 @@ namespace secrataContainer {
 
     void container::update(account_name user, uint64_t guid, string workspaceDescription) {
 
+        require_auth(user);
+
         eosio_assert(workspaceExists(guid), "The specified workspace does not exist");
 
         eosio_assert(userIsMemberOfWorkspace(user, guid, true),
                      "You are not a member of the workspace");
+
+        // TODO - Make sure user has permission to update the description
 
         workspace_index workspaces(_self, guid);
 
@@ -66,6 +70,7 @@ namespace secrataContainer {
     // -------- Membership --------
 
     void container::invite(account_name inviter, account_name invitee, uint64_t guid, string key) {
+
         require_auth(inviter);
 
         eosio_assert(workspaceExists(guid),
@@ -109,6 +114,7 @@ namespace secrataContainer {
     }
 
     void container::accept(account_name invitee, uint64_t guid) {
+
         require_auth(invitee);
 
         eosio_assert(workspaceExists(guid),
@@ -137,6 +143,7 @@ namespace secrataContainer {
     }
 
     void container::decline(account_name invitee, uint64_t guid) {
+
         require_auth(invitee);
 
         eosio_assert(workspaceExists(guid),
@@ -163,6 +170,7 @@ namespace secrataContainer {
     }
 
     void container::remove(account_name remover, account_name member, uint64_t guid) {
+
         require_auth(remover);
 
         eosio_assert(workspaceExists(guid),
@@ -192,6 +200,7 @@ namespace secrataContainer {
     // -------- Messages --------
 
     void container::addmessage(account_name author, uint64_t guid, string message, string mimeType) {
+
         require_auth(author);
 
         eosio_assert(workspaceExists(guid),
@@ -215,6 +224,7 @@ namespace secrataContainer {
     }
 
     void container::ackmessage(account_name user, uint64_t guid, uint128_t msgID) {
+
         require_auth(user);
 
         eosio_assert(workspaceExists(guid),
@@ -263,6 +273,7 @@ namespace secrataContainer {
 
     void container::addfile(account_name uploader, uint64_t guid, uint128_t parentID, uint128_t fileID,
                             uint128_t versionID, uint128_t ancestorVersionID, string fileMetadata) {
+
         require_auth(uploader);
 
         eosio_assert(workspaceExists(guid),
@@ -301,6 +312,7 @@ namespace secrataContainer {
 
     void container::removefile(account_name remover, uint64_t guid, uint128_t fileID,
                                uint128_t versionID) {
+
         require_auth(remover);
 
         eosio_assert(workspaceExists(guid),
@@ -341,6 +353,7 @@ namespace secrataContainer {
     }
 
     void container::ackfile(account_name user, uint64_t guid, uint128_t fileID, uint128_t versionID) {
+        
         require_auth(user);
 
         eosio_assert(workspaceExists(guid),

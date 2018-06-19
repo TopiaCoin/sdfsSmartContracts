@@ -58,7 +58,7 @@ namespace secrataContainer {
 
         // -------- Files --------
 
-        void addFile(account_name uploader,
+        void addfile(account_name uploader,
                      uint128_t guid,
                      uint128_t parentID,
                      uint128_t fileID,
@@ -66,20 +66,19 @@ namespace secrataContainer {
                      uint128_t ancestorVersionID,
                      string fileMetadata);
 
-        void removeFile(account_name remover,
+        void removefile(account_name remover,
                         uint128_t guid,
-                        uint128_t parentID,
                         uint128_t fileID,
                         uint128_t versionID);
 
-        void ackFile(account_name user,
+        void ackfile(account_name user,
                      uint128_t guid,
                      uint128_t fileID,
                      uint128_t versionID);
 
         // -------- Permissions --------
 
-        void setPerm(account_name target,
+        void setperm(account_name target,
                      string permName,
                      uint8_t value);
 
@@ -89,7 +88,12 @@ namespace secrataContainer {
 
         boolean userIsMemberOfWorkspace(account_name user, uint128_t guid, boolean isActive);
 
-        //@abi table
+        boolean fileExistsInWorkspace(uint128_t fileID, uint128_t guid);
+
+        boolean fileVersionExistsInWorkspace(uint128_t fileID, uint128_t versionID, uint128_t guid);
+
+
+            //@abi table
         struct workspace {
             uint64_t id;
             uint128_t guid;
@@ -113,6 +117,7 @@ namespace secrataContainer {
         struct membership {
             uint64_t id;
             uint128_t guid;
+            // TODO - Add the inviter info to this structure.
             account_name user;
             uint8_t status;
             string key;
@@ -183,7 +188,8 @@ namespace secrataContainer {
             uint128_t fileID;
             uint128_t parentID;
             uint128_t versionID;
-            uint128_t *parentVersions;
+            uint128_t parentVersion;
+            account_name uploader;
             uint64_t timestamp;
             uint8_t status;
             string metadata;
@@ -194,7 +200,7 @@ namespace secrataContainer {
 
             uint128_t get_fileID() const { return fileID; }
 
-            EOSLIB_SERIALIZE(file, (id)(guid)(fileID)(parentID)(versionID)(parentVersions)(timestamp)(status)(metadata)
+            EOSLIB_SERIALIZE(file, (id)(guid)(fileID)(parentID)(versionID)(parentVersion)(uploader)(timestamp)(status)(metadata)
             )
         };
 

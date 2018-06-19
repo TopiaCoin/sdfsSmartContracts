@@ -69,7 +69,37 @@
                 {"name": "guid", "type": "uint128"},
                 {"name": "msgID", "type": "uint128"}
             ]
-        },
+        }, {
+            "name": "addFileAction",
+            "base": "",
+            "fields": [
+                {"name": "uploader", "type": "account_name"},
+                {"name": "guid", "type": "uint128"},
+                {"name": "parentID", "type": "uint128"},
+                {"name": "fileID", "type": "uint128"},
+                {"name": "versionID", "type": "uint128"},
+                {"name": "ancestorVersionID", "type": "uint128"},
+                {"name": "fileMetadata", "type": "string"}
+            ]
+        }, {
+            "name": "removeFileAction",
+            "base": "",
+            "fields": [
+                {"name": "remover", "type": "account_name"},
+                {"name": "guid", "type": "uint128"},
+                {"name": "fileID", "type": "uint128"},
+                {"name": "versionID", "type": "uint128"}
+            ]
+        }, {
+            "name": "ackFileAction",
+            "base": "",
+            "fields": [
+                {"name": "user", "type": "account_name"},
+                {"name": "guid", "type": "uint128"},
+                {"name": "fileID", "type": "uint128"},
+                {"name": "versionID", "type": "uint128"}
+            ]
+        }
 
 		{
 			"name": "workspaceRow",
@@ -113,6 +143,33 @@
                 {"name": "id", "type": "uint64"},
                 {"name": "msgID", "type": "uint128"},
                 {"name": "user", "type": "account_name"},
+                {"name": "timestamp", "type": "uint64"}
+            ]
+        },
+        {
+            "name": "fileRow",
+            "base": "",
+            "fields": [
+                {"name": "id", "type": "uint64"},
+                {"name": "guid", "type": "uint128"},
+                {"name": "fileID", "type": "uint128"},
+                {"name": "parentID", "type": "uint128"},
+                {"name": "versionID", "type": "uint128"},
+                {"name": "parentVersions", "type": "uint128"},
+                {"name": "uploader", "type": "account_name"},
+                {"name": "timestamp", "type": "uint64"},
+                {"name": "status", "type": "uint8"},
+                {"name": "metadata", "type": "string"}
+            ]
+        },
+        {
+            "name": "fileReceiptRow",
+            "base": "",
+            "fields": [
+                {"name": "id", "type": "uint64"},
+                {"name": "fileID", "type": "uint128"},
+                {"name": "versionID", "type": "uint128"},
+                {"name": "user", "type": "account_name"},
                 {"name": "timestamp", "type": "uint64"},
             ]
         }
@@ -148,7 +205,19 @@
 		{
 		    "name": "ackmessage",
 		    "type": "ackMessageAction"
-		}
+		},
+        {
+            "name": "addfile",
+            "type": "addFileAction"
+        },
+        {
+            "name": "removefile",
+            "type": "removeFileAction"
+        },
+        {
+            "name": "ackfile",
+            "type": "ackFileAction"
+        }
 
 	],
 	"tables": [{
@@ -195,6 +264,28 @@
             "uint128"
         ],
         "type": "msgReceiptRow"
+    },{
+        "name": "files",
+        "index_type": "i64",
+        "key_names": [
+            "guid",
+            "fileID"
+        ],
+        "key_types": [
+            "uint128",
+            "uint128"
+        ],
+        "type": "fileRow"
+    },{
+        "name": "filereceipts",
+        "index_type": "i64",
+        "key_names": [
+            "fileID"
+        ],
+        "key_types": [
+            "uint128"
+        ],
+        "type": "fileReceiptRow"
     }],
 	"ricardian_clauses": []
 }

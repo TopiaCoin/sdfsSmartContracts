@@ -182,6 +182,8 @@ namespace secrataContainer {
         eosio_assert(userIsMemberOfWorkspace(remover, guid, true),
                      "You are not a member of the workspace");
 
+        // TODO - Make sure remover has permission to remove the member
+
         membership_index memberships(_self, _self);
 
         // Get any existing Membership record for the invitee.
@@ -275,24 +277,115 @@ namespace secrataContainer {
 
     // -------- Files --------
 
-    void container::addFile(account_name uploader, uint128_t guid, uint128_t parentID, uint128_t fileID,
+    void container::addfile(account_name uploader, uint128_t guid, uint128_t parentID, uint128_t fileID,
                             uint128_t versionID, uint128_t ancestorVersionID, string fileMetadata) {
+        require_auth(uploader);
 
+        eosio_assert(workspaceExists(guid),
+                     "The specified workspace does not exist");
+
+        eosio_assert(userIsMemberOfWorkspace(uploader, guid, true),
+                     "You are not a member of the workspace");
+
+        eosio_assert(versionID != 0, "Cannot specify a version ID of 0");
+
+        eosio_assert(!fileVersionExistsInWorkspace(fileID, versionID, guid), "A file with this File ID and Version ID already exists in this workspace");
+
+        eosio_assert(parentID == 0 || fileExistsInWorkspace(parentID, guid), "The specified parent file does not exist in this workspace");
+
+        eosio_assert(ancestorVersionID == 0 || fileVersionExistsInWorkspace(fileID, ancestorVersionID, guid), "The specified ancestor version does not exist in this workspace");
+
+        // TODO - Make sure the uploader has permission to add files to this workspace
+
+        file_index files(_self, _self);
+
+        files.emplace(uploader, [&](auto& f){
+            f.id = now() ;
+            f.guid = guid ;
+            f.fileID = fileID;
+            f.parentID = parentID;
+            f.versionID = versionID;
+            f.parentVersion = ancestorVersionID;
+            f.uploader = uploader;
+            f.timestamp = now();
+            f.status = 1;
+            f.metadata = fileMetadata;
+        });
     }
 
-    void container::removeFile(account_name remover, uint128_t guid, uint128_t parentID, uint128_t fileID,
+    void container::removefile(account_name remover, uint128_t guid, uint128_t fileID,
                                uint128_t versionID) {
+        require_auth(remover);
 
+        eosio_assert(workspaceExists(guid),
+                     "The specified workspace does not exist");
+
+        eosio_assert(userIsMemberOfWorkspace(remover, guid, true),
+                     "You are not a member of the workspace");
+
+        eosio_assert(fileExistsInWorkspace(fileID, guid), "The specified file does not exist in this workspace");
+
+        eosio_assert(versionID == 0 || fileVersionExistsInWorkspace(fileID, versionID, guid), "The specified file version does not exist in this workspace");
+
+        // TODO - Make sure the uploader has permission to remove files from this workspace
+
+        file_index files(_self, _self);
+
+        auto fileIDIdx = files.template get_index<N(byfileid)>();
+        auto matchingFile = fileIDIdx.lower_bound(fileID);
+
+        if ( versionID != 0 ) {
+            // A Version ID was specified, so advance to that specific version
+            while (matchingFile != fileIDIdx.end() && matchingFile->versionID != versionID ) {
+                matchingFile++;
+            }
+        }
+
+        while ( matchingFile != fileIDIdx.end() && matchingFile->fileID == fileID && (versionID == 0 || matchingFile->versionID == versionID ) ) {
+            matchingFile = fileIDIdx.erase(matchingFile);
+        }
+
+        // TODO - Consider cascade deletion of child entries
     }
 
-    void container::ackFile(account_name user, uint128_t guid, uint128_t fileID, uint128_t versionID) {
+    void container::ackfile(account_name user, uint128_t guid, uint128_t fileID, uint128_t versionID) {
+        require_auth(user);
 
+        eosio_assert(workspaceExists(guid),
+                     "The specified workspace does not exist");
+
+        eosio_assert(userIsMemberOfWorkspace(user, guid, true),
+                     "You are not a member of the workspace");
+
+        eosio_assert(fileExistsInWorkspace(fileID, guid), "The specified file does not exist in this workspace");
+
+        eosio_assert(fileVersionExistsInWorkspace(fileID, versionID, guid), "The specified file version does not exist in this workspace");
+
+        fileReceipt_index fileReceipts(_self, _self);
+
+        auto receiptIdx = fileReceipts.template get_index<N(byfileid)>();
+        auto matchingReceipt = receiptIdx.lower_bound(fileID);
+
+        // Advance to the first entry matching the specified versionID
+        while (matchingReceipt != receiptIdx.end() && matchingReceipt->fileID == fileID && matchingReceipt->versionID != versionID && matchingReceipt->user != user) {
+            matchingReceipt++;
+        }
+
+        eosio_assert ( matchingReceipt == receiptIdx.end() || matchingReceipt->fileID != fileID, "This user has already acknowledged this file" );
+
+        fileReceipts.emplace(user, [&](auto& r){
+            r.id = now();
+            r.fileID = fileID;
+            r.versionID = versionID;
+            r.user = user;
+            r.timestamp = now();
+        });
     }
 
     // -------- Permissions --------
 
-    void container::setPerm(account_name target, string permName, uint8_t value) {
-
+    void container::setperm(account_name target, string permName, uint8_t value) {
+        print("Setting Permissions\n") ;
     }
 
 
@@ -331,6 +424,31 @@ namespace secrataContainer {
         return found;
     }
 
+    boolean container::fileExistsInWorkspace(uint128_t fileID, uint128_t guid) {
+        file_index files(_self, _self);
+
+        auto fileIDIdx = files.template get_index<N(byfileid)>();
+        auto matchedFileID = fileIDIdx.lower_bound(fileID) ;
+
+        return (matchedFileID != fileIDIdx.end() && matchedFileID->guid == guid) ;
+    }
+
+    boolean container::fileVersionExistsInWorkspace(uint128_t fileID, uint128_t versionID, uint128_t guid) {
+        file_index files(_self, _self);
+
+        auto fileIDIdx = files.template get_index<N(byfileid)>();
+        auto matchedFileID = fileIDIdx.lower_bound(fileID) ;
+
+        boolean found = false ;
+
+        while ( !found && matchedFileID != fileIDIdx.end() && matchedFileID->guid == guid && matchedFileID->fileID == fileID) {
+            found = (matchedFileID->versionID == versionID);
+            matchedFileID++;
+        }
+
+        return found;
+    }
+
     // ======== Utility Functions ========
 
 //    uint128_t bytes_to_uint128(char *bytes, unsigned int length) {
@@ -340,5 +458,5 @@ namespace secrataContainer {
 
 
 EOSIO_ABI( secrataContainer::container, (create)(update)(invite)(accept)(decline)
-(remove)(addmessage)(ackmessage))
+(remove)(addmessage)(ackmessage)(addfile)(removefile)(ackfile))
 

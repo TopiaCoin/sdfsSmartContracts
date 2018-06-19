@@ -47,11 +47,12 @@ namespace secrataContainer {
 
         // -------- Messages --------
 
-        void addMessage(account_name author,
+        void addmessage(account_name author,
                         uint128_t guid,
-                        string message);
+                        string message,
+                        string mimeType);
 
-        void ackMessage(account_name user,
+        void ackmessage(account_name user,
                         uint128_t guid,
                         uint128_t msgID);
 
@@ -86,7 +87,7 @@ namespace secrataContainer {
 
         boolean workspaceExists(uint128_t guid);
 
-        boolean userIsMemberOfWorkspace(account_name user, uint128_t guid);
+        boolean userIsMemberOfWorkspace(account_name user, uint128_t guid, boolean isActive);
 
         //@abi table
         struct workspace {

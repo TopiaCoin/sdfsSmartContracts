@@ -23,3 +23,4 @@ secrataContainer/contracts/**/*.wast
 secrataContainer/contracts/**/*.wast.hpp
 secrataContainer/contracts/libc++/upstream/test/std/experimental/filesystem/Inputs/static_test_env/bad_symlink
 secrataContainer/externals/binaryen/test/emscripten/system/include/libc/bits
+secrataContainer.abi.hpp

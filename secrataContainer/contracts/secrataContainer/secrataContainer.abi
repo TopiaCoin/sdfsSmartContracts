@@ -52,7 +52,24 @@
 				{"name": "removee", "type": "account_name"},
 				{"name": "guid", "type": "uint128"}
 			]
-		},
+		}, {
+		    "name": "addMessageAction",
+		    "base": "",
+		    "fields": [
+		        {"name": "author", "type": "account_name"},
+		        {"name": "guid", "type": "uint128"},
+		        {"name": "message", "type": "string"},
+		        {"name": "mimeType", "type": "string"}
+		    ]
+		}, {
+            "name": "ackMessageAction",
+            "base": "",
+            "fields": [
+                {"name": "user", "type": "account_name"},
+                {"name": "guid", "type": "uint128"},
+                {"name": "msgID", "type": "uint128"}
+            ]
+        },
 
 		{
 			"name": "workspaceRow",
@@ -75,7 +92,30 @@
 				{"name": "status", "type": "uint8"},
 				{"name": "key", "type": "string"}
 		    ]
-		}
+		},
+        {
+            "name": "messageRow",
+            "base": "",
+            "fields": [
+                {"name": "id", "type": "uint64"},
+                {"name": "guid", "type": "uint128"},
+                {"name": "msgID", "type": "uint128"},
+                {"name": "author", "type": "account_name"},
+                {"name": "text", "type": "string"},
+                {"name": "timestamp", "type": "uint64"},
+                {"name": "mimeType", "type": "string"}
+            ]
+        },
+        {
+            "name": "msgReceiptRow",
+            "base": "",
+            "fields": [
+                {"name": "id", "type": "uint64"},
+                {"name": "msgID", "type": "uint128"},
+                {"name": "user", "type": "account_name"},
+                {"name": "timestamp", "type": "uint64"},
+            ]
+        }
 	],
 	"actions": [{
 			"name": "create",
@@ -100,6 +140,14 @@
 		{
 			"name": "remove",
 			"type": "removeAction"
+		},
+		{
+		    "name": "addmessage",
+		    "type": "addMessageAction"
+		},
+		{
+		    "name": "ackmessage",
+		    "type": "ackMessageAction"
 		}
 
 	],
@@ -125,6 +173,28 @@
           "account_name"
         ],
         "type": "membershipRow"
+    },{
+        "name": "messages",
+        "index_type": "i64",
+        "key_names": [
+        "guid",
+        "msgID"
+        ],
+        "key_types": [
+        "uint128",
+        "uint128"
+        ],
+        "type": "messageRow"
+    },{
+        "name": "msgreceipts",
+        "index_type": "i64",
+        "key_names": [
+            "msgID"
+        ],
+        "key_types": [
+            "uint128"
+        ],
+        "type": "msgReceiptRow"
     }],
 	"ricardian_clauses": []
 }

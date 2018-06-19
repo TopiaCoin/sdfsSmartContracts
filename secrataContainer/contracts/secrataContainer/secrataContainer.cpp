@@ -55,8 +55,12 @@ namespace secrataContainer {
 
         eosio_assert(!workspaceExists(guid), "A Workspace with the specified GUID already exists");
 
+        eosio_assert(userIsMemberOfWorkspace(user, guid, true),
+                     "You are not a member of the workspace");
+
         workspace_index workspaces(_self, _self);
 
+        // TODO - Implement this method
     }
 
     // -------- Membership --------
@@ -67,7 +71,7 @@ namespace secrataContainer {
         eosio_assert(workspaceExists(guid),
                      "The specified workspace does not exist");
 
-        eosio_assert(userIsMemberOfWorkspace(inviter, guid),
+        eosio_assert(userIsMemberOfWorkspace(inviter, guid, true),
                      "You are not a member of the workspace");
 
         // TODO - Make sure inviter has permission to invite
@@ -111,7 +115,7 @@ namespace secrataContainer {
         eosio_assert(workspaceExists(guid),
                      "The specified workspace does not exist");
 
-        eosio_assert(userIsMemberOfWorkspace(invitee, guid),
+        eosio_assert(userIsMemberOfWorkspace(invitee, guid, false),
                      "You are not a member of the workspace");
 
 
@@ -123,7 +127,8 @@ namespace secrataContainer {
 
         while (matched_guid_itr != guidIdx.end() && matched_guid_itr->guid == guid &&
                matched_guid_itr->user != invitee) {
-            cout << matched_guid_itr->guid << ((const char *) "? ") << guid << ((const char *)" --- ") << matched_guid_itr->user << ((const char *) "? ") << (int) invitee << ((const char *) "\n");
+            cout << matched_guid_itr->guid << ((const char *) "? ") << guid << ((const char *) " --- ")
+                 << matched_guid_itr->user << ((const char *) "? ") << (int) invitee << ((const char *) "\n");
             matched_guid_itr++;
         }
 
@@ -143,7 +148,7 @@ namespace secrataContainer {
         eosio_assert(workspaceExists(guid),
                      "The specified workspace does not exist");
 
-        eosio_assert(userIsMemberOfWorkspace(invitee, guid),
+        eosio_assert(userIsMemberOfWorkspace(invitee, guid, false),
                      "You are not a member of the workspace");
 
         membership_index memberships(_self, _self);
@@ -174,7 +179,7 @@ namespace secrataContainer {
         eosio_assert(workspaceExists(guid),
                      "The specified workspace does not exist");
 
-        eosio_assert(userIsMemberOfWorkspace(remover, guid),
+        eosio_assert(userIsMemberOfWorkspace(remover, guid, true),
                      "You are not a member of the workspace");
 
         membership_index memberships(_self, _self);
@@ -188,7 +193,8 @@ namespace secrataContainer {
             matched_guid_itr++;
         }
 
-        if(matched_guid_itr != guidIdx.end() && matched_guid_itr->guid == guid && matched_guid_itr->user == member && matched_guid_itr->status != 2) {
+        if (matched_guid_itr != guidIdx.end() && matched_guid_itr->guid == guid && matched_guid_itr->user == member &&
+            matched_guid_itr->status != 2) {
             // Update the existing record, to mark the user as active.
             guidIdx.modify(matched_guid_itr, remover, [&](auto &m) {
                 m.status = 2;
@@ -199,18 +205,72 @@ namespace secrataContainer {
 
     // -------- Messages --------
 
-    void container::addMessage(account_name author, uint128_t guid, string message) {
+    void container::addmessage(account_name author, uint128_t guid, string message, string mimeType) {
         require_auth(author);
 
-         eosio_assert(workspaceExists(guid),
-                      "The specified workspace does not exist");
+        eosio_assert(workspaceExists(guid),
+                     "The specified workspace does not exist");
 
-        eosio_assert(userIsMemberOfWorkspace(author, guid),
+        eosio_assert(userIsMemberOfWorkspace(author, guid, true),
                      "You are not a member of the workspace");
+
+        message_index messages(_self, _self);
+
+        messages.emplace(author, [&](auto &m) {
+            m.id = now();
+            m.guid = guid;
+            m.msgID = guid + now();
+            m.author = author;
+            m.text = message;
+            m.timestamp = now();
+            m.mimeType = mimeType;
+        });
+
+        print("Message Created\n") ;
+    }
+
+    void container::ackmessage(account_name user, uint128_t guid, uint128_t msgID) {
+        require_auth(user);
+
+        eosio_assert(workspaceExists(guid),
+                     "The specified workspace does not exist");
+
+        eosio_assert(userIsMemberOfWorkspace(user, guid, true),
+                     "You are not a member of the workspace");
+
+        // Make sure the specified message exists in the workspace
+
+        message_index messages(_self, _self);
+        auto messageIDIdx = messages.template get_index<N(bymsgid)>();
+        auto existingMessage = messageIDIdx.lower_bound(msgID) ;
+
+        eosio_assert(existingMessage != messageIDIdx.end() && existingMessage->guid == guid, "No message with the specified ID exists in this workspace");
+
+        // Find any existing receipt, and only add if it doesn't exist
+
+        messageReceipt_index receipts(_self, _self);
+
+        auto msgIdIdx = receipts.template get_index<N(bymsgid)>();
+        auto matchMsgIdx = msgIdIdx.lower_bound(msgID);
+
+        while (matchMsgIdx != msgIdIdx.end() && matchMsgIdx->msgID == msgID &&
+               matchMsgIdx->user != user) {
+            matchMsgIdx++;
         }
 
-    void container::ackMessage(account_name user, uint128_t guid, uint128_t msgID) {
+        eosio_assert(matchMsgIdx == msgIdIdx.end(), "This user has already acknowledged this message");
 
+        if (matchMsgIdx == msgIdIdx.end()) {
+            receipts.emplace(user, [&](auto &r) {
+                r.id = now();
+                r.msgID = msgID;
+                r.user = user;
+                r.timestamp = now();
+            });
+        } else {
+            // A receipt already exists for this user.
+            cout << ((const char *)"Message Already Acknowledged\n");
+        }
     }
 
     // -------- Files --------
@@ -251,7 +311,7 @@ namespace secrataContainer {
                (matched_guid_itr->guid == guid);
     }
 
-    boolean container::userIsMemberOfWorkspace(account_name user, uint128_t guid) {
+    boolean container::userIsMemberOfWorkspace(account_name user, uint128_t guid, boolean isActive) {
         membership_index memberships(_self, _self);
 
         // Using the guid index, we find the first entry in the membership table for the lower bounds of the
@@ -261,10 +321,10 @@ namespace secrataContainer {
         auto guidIdx = memberships.template get_index<N(byguid)>();
         auto matched_guid_itr = guidIdx.lower_bound(guid);
 
-        boolean found = false ;
+        boolean found = false;
 
         while (!found && matched_guid_itr != guidIdx.end() && matched_guid_itr->guid == guid) {
-            found = (matched_guid_itr->user == user);
+            found = (matched_guid_itr->user == user) && (!isActive || (isActive && matched_guid_itr->status == 1));
             matched_guid_itr++;
         }
 
@@ -279,5 +339,6 @@ namespace secrataContainer {
 }
 
 
-EOSIO_ABI( secrataContainer::container, (create)(update)(invite)(accept)(decline)(remove) )
+EOSIO_ABI( secrataContainer::container, (create)(update)(invite)(accept)(decline)
+(remove)(addmessage)(ackmessage))
 

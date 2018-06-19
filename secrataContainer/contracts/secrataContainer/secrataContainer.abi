@@ -8,7 +8,7 @@
 			"base": "",
 			"fields": [
 				{"name": "owner", "type": "account_name"},
-				{"name": "guid", "type": "uint128"},
+				{"name": "guid", "type": "uint64"},
 				{"name": "workspaceName", "type": "string"},
 				{"name": "workspaceDescription", "type": "string"},
 				{"name": "key", "type": "string"}
@@ -18,7 +18,7 @@
 			"base": "",
 			"fields": [
 				{"name": "user", "type": "account_name"},
-				{"name": "guid", "type": "uint128"},
+				{"name": "guid", "type": "uint64"},
 				{"name": "workspaceDescription", "type": "string"}
 			]
 		}, {
@@ -27,7 +27,7 @@
 			"fields": [
 				{"name": "inviter", "type": "account_name"},
 				{"name": "invitee", "type": "account_name"},
-				{"name": "guid", "type": "uint128"},
+				{"name": "guid", "type": "uint64"},
 				{"name": "key", "type": "string"}
 			]
 		}, {
@@ -35,14 +35,14 @@
 			"base": "",
 			"fields": [
 				{"name": "invitee", "type": "account_name"},
-				{"name": "guid", "type": "uint128"}
+				{"name": "guid", "type": "uint64"}
 			]
 		}, {
 			"name": "declineAction",
 			"base": "",
 			"fields": [
 				{"name": "invitee", "type": "account_name"},
-				{"name": "guid", "type": "uint128"}
+				{"name": "guid", "type": "uint64"}
 			]
 		}, {
 			"name": "removeAction",
@@ -50,14 +50,14 @@
 			"fields": [
 				{"name": "remover", "type": "account_name"},
 				{"name": "removee", "type": "account_name"},
-				{"name": "guid", "type": "uint128"}
+				{"name": "guid", "type": "uint64"}
 			]
 		}, {
 		    "name": "addMessageAction",
 		    "base": "",
 		    "fields": [
 		        {"name": "author", "type": "account_name"},
-		        {"name": "guid", "type": "uint128"},
+		        {"name": "guid", "type": "uint64"},
 		        {"name": "message", "type": "string"},
 		        {"name": "mimeType", "type": "string"}
 		    ]
@@ -66,7 +66,7 @@
             "base": "",
             "fields": [
                 {"name": "user", "type": "account_name"},
-                {"name": "guid", "type": "uint128"},
+                {"name": "guid", "type": "uint64"},
                 {"name": "msgID", "type": "uint128"}
             ]
         }, {
@@ -74,7 +74,7 @@
             "base": "",
             "fields": [
                 {"name": "uploader", "type": "account_name"},
-                {"name": "guid", "type": "uint128"},
+                {"name": "guid", "type": "uint64"},
                 {"name": "parentID", "type": "uint128"},
                 {"name": "fileID", "type": "uint128"},
                 {"name": "versionID", "type": "uint128"},
@@ -86,7 +86,7 @@
             "base": "",
             "fields": [
                 {"name": "remover", "type": "account_name"},
-                {"name": "guid", "type": "uint128"},
+                {"name": "guid", "type": "uint64"},
                 {"name": "fileID", "type": "uint128"},
                 {"name": "versionID", "type": "uint128"}
             ]
@@ -95,18 +95,17 @@
             "base": "",
             "fields": [
                 {"name": "user", "type": "account_name"},
-                {"name": "guid", "type": "uint128"},
+                {"name": "guid", "type": "uint64"},
                 {"name": "fileID", "type": "uint128"},
                 {"name": "versionID", "type": "uint128"}
             ]
-        }
+        },
 
 		{
 			"name": "workspaceRow",
 			"base": "",
 			"fields": [
 				{"name": "id", "type": "uint64"},
-				{"name": "guid", "type": "uint128"},
 				{"name": "name", "type": "string"},
 				{"name": "description", "type": "string"},
 				{"name": "owner", "type": "account_name"}
@@ -117,7 +116,7 @@
 		    "base": "",
 		    "fields": [
 				{"name": "id", "type": "uint64"},
-				{"name": "guid", "type": "uint128"},
+				{"name": "inviter", "type": "account_name"},
 				{"name": "user", "type": "account_name"},
 				{"name": "status", "type": "uint8"},
 				{"name": "key", "type": "string"}
@@ -128,7 +127,6 @@
             "base": "",
             "fields": [
                 {"name": "id", "type": "uint64"},
-                {"name": "guid", "type": "uint128"},
                 {"name": "msgID", "type": "uint128"},
                 {"name": "author", "type": "account_name"},
                 {"name": "text", "type": "string"},
@@ -151,7 +149,6 @@
             "base": "",
             "fields": [
                 {"name": "id", "type": "uint64"},
-                {"name": "guid", "type": "uint128"},
                 {"name": "fileID", "type": "uint128"},
                 {"name": "parentID", "type": "uint128"},
                 {"name": "versionID", "type": "uint128"},
@@ -224,21 +221,17 @@
         "name": "workspaces",
         "index_type": "i64",
         "key_names": [
-            "guid"
         ],
         "key_types": [
-            "uint128"
         ],
         "type": "workspaceRow"
     },{
         "name": "membership",
         "index_type": "i64",
         "key_names": [
-          "guid",
           "user"
         ],
         "key_types": [
-          "uint128",
           "account_name"
         ],
         "type": "membershipRow"
@@ -246,12 +239,10 @@
         "name": "messages",
         "index_type": "i64",
         "key_names": [
-        "guid",
-        "msgID"
+            "msgID"
         ],
         "key_types": [
-        "uint128",
-        "uint128"
+            "uint128"
         ],
         "type": "messageRow"
     },{
@@ -268,11 +259,9 @@
         "name": "files",
         "index_type": "i64",
         "key_names": [
-            "guid",
             "fileID"
         ],
         "key_types": [
-            "uint128",
             "uint128"
         ],
         "type": "fileRow"

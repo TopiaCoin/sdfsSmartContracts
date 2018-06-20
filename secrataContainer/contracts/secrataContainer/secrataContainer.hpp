@@ -63,7 +63,7 @@ namespace secrataContainer {
                      uint128_t parentID,
                      uint128_t fileID,
                      uint128_t versionID,
-                     std::vector<uint128_t> ancestorVersionIDs,
+                     std::vector <uint128_t> ancestorVersionIDs,
                      string fileMetadata);
 
         void removefile(account_name remover,
@@ -76,12 +76,38 @@ namespace secrataContainer {
                      uint128_t fileID,
                      uint128_t versionID);
 
+        void lockfile(account_name user,
+                      uint64_t guid,
+                      uint128_t fileID);
+
+        void unlockfile(account_name user,
+                        uint64_t guid,
+                        uint128_t fileID);
+
+        void addtag(account_name user,
+                    uint64_t guid,
+                    uint128_t fileID,
+                    uint128_t versionID,
+                    boolean isPublic,
+                    string value);
+
+        void removetag(account_name user,
+                       uint64_t guid,
+                       uint128_t fileID,
+                       uint128_t versionID,
+                       boolean isPublic, string value);
+
         // -------- Permissions --------
 
-        void setperm(account_name target,
+        void addperm(account_name target,
                      uint64_t guid,
                      string permName,
                      uint8_t value);
+
+        void removeperm(account_name target,
+                        uint64_t guid,
+                        string permName,
+                        uint8_t value);
 
     private:
 
@@ -94,7 +120,7 @@ namespace secrataContainer {
         boolean fileVersionExistsInWorkspace(uint128_t fileID, uint128_t versionID, uint64_t guid);
 
 
-            //@abi table
+        //@abi table
         struct workspace {
             uint64_t id;
             string name;
@@ -108,7 +134,7 @@ namespace secrataContainer {
         };
 
         typedef eosio::multi_index<N(workspaces), workspace>
-        workspace_index;
+                workspace_index;
 
         //@abi table
         struct membership {
@@ -127,7 +153,7 @@ namespace secrataContainer {
         };
 
         typedef eosio::multi_index<N(membership), membership,
-                indexed_by<N(byuser), const_mem_fun < membership, account_name, &membership::get_user> > >
+                indexed_by < N(byuser), const_mem_fun < membership, account_name, &membership::get_user> > >
         membership_index;
 
         //@abi table
@@ -148,7 +174,7 @@ namespace secrataContainer {
         };
 
         typedef eosio::multi_index<N(messages), message,
-        indexed_by<N(bymsgid), const_mem_fun < message, uint128_t, &message::get_msgID> > >
+                indexed_by < N(bymsgid), const_mem_fun < message, uint128_t, &message::get_msgID> > >
         message_index;
 
         //@abi table
@@ -176,8 +202,9 @@ namespace secrataContainer {
             uint128_t fileID;
             uint128_t parentID;
             uint128_t versionID;
-            std::vector<uint128_t> parentVersions;
+            std::vector <uint128_t> parentVersions;
             account_name uploader;
+            account_name lockOwner;
             uint64_t timestamp;
             uint8_t status;
             string metadata;
@@ -186,12 +213,13 @@ namespace secrataContainer {
 
             uint128_t get_fileID() const { return fileID; }
 
-            EOSLIB_SERIALIZE(file, (id)(fileID)(parentID)(versionID)(parentVersions)(uploader)(timestamp)(status)(metadata)
+            EOSLIB_SERIALIZE(file, (id)(fileID)(parentID)(versionID)(parentVersions)(uploader)(lockOwner)(timestamp)(
+                    status)(metadata)
             )
         };
 
         typedef eosio::multi_index<N(files), file,
-        indexed_by<N(byfileid), const_mem_fun < file, uint128_t, &file::get_fileID> > >
+                indexed_by < N(byfileid), const_mem_fun < file, uint128_t, &file::get_fileID> > >
         file_index;
 
         //@abi table
@@ -219,8 +247,8 @@ namespace secrataContainer {
             uint64_t id;
             uint128_t fileID;
             uint128_t versionID;
-            string scope;
-            string name;
+            uint64_t scope;
+            string value;
 
             uint64_t primary_key() const { return id; }
 
@@ -228,12 +256,13 @@ namespace secrataContainer {
 
             uint128_t get_versionID() const { return versionID; }
 
-            EOSLIB_SERIALIZE(fileTag, (id)(fileID)(versionID)(scope)(name)
+            EOSLIB_SERIALIZE(fileTag, (id)(fileID)(versionID)(scope)(value)
             )
         };
 
         typedef eosio::multi_index<N(filetags), fileTag,
-                indexed_by < N(byfileid), const_mem_fun < fileTag, uint128_t, &fileTag::get_fileID> > >
+                indexed_by < N(byfileid), const_mem_fun < fileTag, uint128_t, &fileTag::get_fileID> >,
+        indexed_by < N(byverid), const_mem_fun < fileTag, uint128_t, &fileTag::get_versionID> > >
         fileTag_index;
 
         //@abi table

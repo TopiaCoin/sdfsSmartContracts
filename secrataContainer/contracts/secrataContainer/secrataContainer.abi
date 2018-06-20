@@ -2,6 +2,9 @@
 	"types": [{
 		"new_type_name": "account_name",
 		"type": "name"
+	},{
+	    "new_type_name": "boolean",
+	    "type": "uint8"
 	}],
 	"structs": [{
 			"name": "createAction",
@@ -99,7 +102,45 @@
                 {"name": "fileID", "type": "uint128"},
                 {"name": "versionID", "type": "uint128"}
             ]
-        },
+        }, {
+            "name": "addTagAction",
+            "base": "",
+            "fields": [
+                {"name": "user", "type": "account_name"},
+                {"name": "guid", "type": "uint64"},
+                {"name": "fileID", "type": "uint128"},
+                {"name": "versionID", "type": "uint128"},
+                {"name": "isPublic", "type": "boolean"},
+                {"name": "value", "type": "string"}
+            ]
+        }, {
+            "name": "removeTagAction",
+            "base": "",
+            "fields": [
+                {"name": "user", "type": "account_name"},
+                {"name": "guid", "type": "uint64"},
+                {"name": "fileID", "type": "uint128"},
+                {"name": "versionID", "type": "uint128"},
+                {"name": "isPublic", "type": "boolean"},
+                {"name": "value", "type": "string"}
+            ]
+        }, {
+            "name": "lockFileAction",
+            "base": "",
+            "fields": [
+                {"name": "user", "type": "account_name"},
+                {"name": "guid", "type": "uint64"},
+                {"name": "fileID", "type": "uint128"}
+            ]
+        }, {
+            "name": "unlockFileAction",
+            "base": "",
+            "fields": [
+                {"name": "user", "type": "account_name"},
+                {"name": "guid", "type": "uint64"},
+                {"name": "fileID", "type": "uint128"}
+            ]
+         },
 
 		{
 			"name": "workspaceRow",
@@ -154,6 +195,7 @@
                 {"name": "versionID", "type": "uint128"},
                 {"name": "parentVersions", "type": "uint128[]"},
                 {"name": "uploader", "type": "account_name"},
+                {"name": "lockOwner", "type": "account_name"},
                 {"name": "timestamp", "type": "uint64"},
                 {"name": "status", "type": "uint8"},
                 {"name": "metadata", "type": "string"}
@@ -168,6 +210,17 @@
                 {"name": "versionID", "type": "uint128"},
                 {"name": "user", "type": "account_name"},
                 {"name": "timestamp", "type": "uint64"},
+            ]
+        },
+        {
+            "name": "fileTagRow",
+            "base": "",
+            "fields": [
+                {"name": "id", "type": "uint64"},
+                {"name": "fileID", "type": "uint128"},
+                {"name": "versionID", "type": "uint128"},
+                {"name": "scope", "type": "uint64"},
+                {"name": "value", "type": "string"},
             ]
         }
 	],
@@ -214,6 +267,22 @@
         {
             "name": "ackfile",
             "type": "ackFileAction"
+        },
+        {
+            "name": "addtag",
+            "type": "addTagAction"
+        },
+        {
+            "name": "removetag",
+            "type": "removeTagAction"
+        },
+        {
+            "name": "lockfile",
+            "type": "lockFileAction"
+        },
+        {
+            "name": "unlockfile",
+            "type": "unlockFileAction"
         }
 
 	],
@@ -275,6 +344,18 @@
             "uint128"
         ],
         "type": "fileReceiptRow"
+    },{
+        "name": "filetags",
+        "index_type": "i64",
+        "key_names": [
+            "fileID",
+            "versionID"
+        ],
+        "key_types": [
+            "uint128",
+            "uint128"
+        ],
+        "type": "fileTagRow"
     }],
 	"ricardian_clauses": []
 }

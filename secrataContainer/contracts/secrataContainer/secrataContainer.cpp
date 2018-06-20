@@ -21,8 +21,12 @@ namespace secrataContainer {
 
     // -------- Containers --------
 
-    void container::create(account_name owner, uint64_t guid, string workspaceName, string workspaceDescription,
+    void container::create(account_name owner,
+                           uint64_t guid,
+                           string workspaceName,
+                           string workspaceDescription,
                            string key) {
+
         require_auth(owner);
 
         eosio_assert(!workspaceExists(guid), "A Workspace with the specified GUID already exists");
@@ -45,9 +49,13 @@ namespace secrataContainer {
             membership.status = 1;
             membership.key = key;
         });
+
+        // TODO - Assign all permissions to the creator
     }
 
-    void container::update(account_name user, uint64_t guid, string workspaceDescription) {
+    void container::update(account_name user,
+                           uint64_t guid,
+                           string workspaceDescription) {
 
         require_auth(user);
 
@@ -69,7 +77,10 @@ namespace secrataContainer {
 
     // -------- Membership --------
 
-    void container::invite(account_name inviter, account_name invitee, uint64_t guid, string key) {
+    void container::invite(account_name inviter,
+                           account_name invitee,
+                           uint64_t guid,
+                           string key) {
 
         require_auth(inviter);
 
@@ -80,6 +91,8 @@ namespace secrataContainer {
                      "You are not a member of the workspace");
 
         // TODO - Make sure inviter has permission to invite
+
+        // TODO - Should this method assign default permissions, or require permissions to be passed in?
 
         membership_index memberships(_self, guid);
 
@@ -113,7 +126,8 @@ namespace secrataContainer {
         }
     }
 
-    void container::accept(account_name invitee, uint64_t guid) {
+    void container::accept(account_name invitee,
+                           uint64_t guid) {
 
         require_auth(invitee);
 
@@ -142,7 +156,8 @@ namespace secrataContainer {
         });
     }
 
-    void container::decline(account_name invitee, uint64_t guid) {
+    void container::decline(account_name invitee,
+                            uint64_t guid) {
 
         require_auth(invitee);
 
@@ -169,7 +184,9 @@ namespace secrataContainer {
         guidIdx.erase(matched_guid_itr);
     }
 
-    void container::remove(account_name remover, account_name member, uint64_t guid) {
+    void container::remove(account_name remover,
+                           account_name member,
+                           uint64_t guid) {
 
         require_auth(remover);
 
@@ -199,7 +216,10 @@ namespace secrataContainer {
 
     // -------- Messages --------
 
-    void container::addmessage(account_name author, uint64_t guid, string message, string mimeType) {
+    void container::addmessage(account_name author,
+                               uint64_t guid,
+                               string message,
+                               string mimeType) {
 
         require_auth(author);
 
@@ -223,7 +243,9 @@ namespace secrataContainer {
         print("Message Created\n");
     }
 
-    void container::ackmessage(account_name user, uint64_t guid, uint128_t msgID) {
+    void container::ackmessage(account_name user,
+                               uint64_t guid,
+                               uint128_t msgID) {
 
         require_auth(user);
 
@@ -271,8 +293,13 @@ namespace secrataContainer {
 
     // -------- Files --------
 
-    void container::addfile(account_name uploader, uint64_t guid, uint128_t parentID, uint128_t fileID,
-                            uint128_t versionID, std::vector <uint128_t> ancestorVersionIDs, string fileMetadata) {
+    void container::addfile(account_name uploader,
+                            uint64_t guid,
+                            uint128_t parentID,
+                            uint128_t fileID,
+                            uint128_t versionID,
+                            std::vector <uint128_t> ancestorVersionIDs,
+                            string fileMetadata) {
 
         require_auth(uploader);
 
@@ -312,7 +339,9 @@ namespace secrataContainer {
         });
     }
 
-    void container::removefile(account_name remover, uint64_t guid, uint128_t fileID,
+    void container::removefile(account_name remover,
+                               uint64_t guid,
+                               uint128_t fileID,
                                uint128_t versionID) {
 
         require_auth(remover);
@@ -354,7 +383,10 @@ namespace secrataContainer {
         // TODO - Consider cascade deletion of child entries
     }
 
-    void container::ackfile(account_name user, uint64_t guid, uint128_t fileID, uint128_t versionID) {
+    void container::ackfile(account_name user,
+                            uint64_t guid,
+                            uint128_t fileID,
+                            uint128_t versionID) {
 
         require_auth(user);
 
@@ -392,9 +424,156 @@ namespace secrataContainer {
         });
     }
 
+    void container::lockfile(account_name user,
+                             uint64_t guid,
+                             uint128_t fileID) {
+
+        require_auth(user);
+
+        eosio_assert(workspaceExists(guid),
+                     "The specified workspace does not exist");
+
+        eosio_assert(userIsMemberOfWorkspace(user, guid, true),
+                     "You are not a member of the workspace");
+
+        eosio_assert(fileExistsInWorkspace(fileID, guid), "The specified file does not exist in this workspace");
+
+        // TODO - Check to see if the user has permission to lock files
+
+        file_index files(_self, guid);
+
+        auto fileIDIdx = files.template get_index<N(byfileid)>();
+        auto matchingFile = fileIDIdx.lower_bound(fileID);
+
+        fileIDIdx.modify(matchingFile, user, [&](auto &f) {
+            f.lockOwner = user;
+        });
+    }
+
+    void container::unlockfile(account_name user,
+                               uint64_t guid,
+                               uint128_t fileID) {
+
+        require_auth(user);
+
+        eosio_assert(workspaceExists(guid),
+                     "The specified workspace does not exist");
+
+        eosio_assert(userIsMemberOfWorkspace(user, guid, true),
+                     "You are not a member of the workspace");
+
+        eosio_assert(fileExistsInWorkspace(fileID, guid), "The specified file does not exist in this workspace");
+
+        file_index files(_self, guid);
+
+        auto fileIDIdx = files.template get_index<N(byfileid)>();
+        auto matchingFile = fileIDIdx.lower_bound(fileID);
+
+        eosio_assert(matchingFile->lockOwner == 0 || matchingFile->lockOwner == user,
+                     "You do no hold the lock on this file");
+
+        fileIDIdx.modify(matchingFile, user, [&](auto &f) {
+            f.lockOwner = 0;
+        });
+
+    }
+
+    void container::addtag(account_name user,
+                           uint64_t guid,
+                           uint128_t fileID,
+                           uint128_t versionID,
+                           boolean isPublic,
+                           string value) {
+
+        require_auth(user);
+
+        eosio_assert(workspaceExists(guid),
+                     "The specified workspace does not exist");
+
+        eosio_assert(userIsMemberOfWorkspace(user, guid, true),
+                     "You are not a member of the workspace");
+
+        eosio_assert(fileExistsInWorkspace(fileID, guid), "The specified file does not exist in this workspace");
+
+        // TODO - Check to see if the user has permission to add tags to files.
+
+        fileTag_index fileTags(_self, guid);
+
+        auto fileIDIdx = fileTags.template get_index<N(byverid)>();
+        auto matchingTag = fileIDIdx.lower_bound(versionID);
+
+        uint64_t targetScope = user ;
+        if ( isPublic ) {
+            targetScope = N(public);
+        }
+
+        cout << ((const char*)"Target Scope: ") << targetScope << ((const char *)"\n") ;
+
+        while (matchingTag != fileIDIdx.end() && matchingTag->versionID == versionID && matchingTag->fileID == fileID ) {
+            eosio_assert(matchingTag->scope != targetScope || matchingTag->value != value,
+                         "The specified tag already exists");
+            matchingTag++;
+        }
+
+        fileTags.emplace(user, [&](auto &t) {
+            t.id = fileTags.available_primary_key();
+            t.fileID = fileID;
+            t.versionID = versionID;
+            t.scope = targetScope;
+            t.value = value;
+        });
+    }
+
+    void container::removetag(account_name user,
+                              uint64_t guid,
+                              uint128_t fileID,
+                              uint128_t versionID,
+                              boolean isPublic,
+                              string value) {
+
+        require_auth(user);
+
+        eosio_assert(workspaceExists(guid),
+                     "The specified workspace does not exist");
+
+        eosio_assert(userIsMemberOfWorkspace(user, guid, true),
+                     "You are not a member of the workspace");
+
+        eosio_assert(fileExistsInWorkspace(fileID, guid), "The specified file does not exist in this workspace");
+
+        if (isPublic) {
+            // TODO - Check to see if the user has permission to add tags to files.
+        }
+
+        fileTag_index fileTags(_self, guid);
+
+        auto fileIDIdx = fileTags.template get_index<N(byverid)>();
+        auto matchingTag = fileIDIdx.lower_bound(versionID);
+
+        uint64_t targetScope = user ;
+        if ( isPublic ) {
+            targetScope = N(public);
+        }
+
+        cout << ((const char*)"Target Scope: ") << targetScope << ((const char *)"\n") ;
+
+        while (matchingTag != fileIDIdx.end() && matchingTag->versionID == versionID && matchingTag->fileID == fileID &&
+                (matchingTag->scope != targetScope || matchingTag->value != value)) {
+            matchingTag++;
+        }
+
+        eosio_assert (matchingTag != fileIDIdx.end(), "The specified tag does not exist") ;
+
+        fileIDIdx.erase(matchingTag);
+    }
+
     // -------- Permissions --------
 
-    void container::setperm(account_name target, uint64_t guid, string permName, uint8_t value) {
+    void container::addperm(account_name target, uint64_t guid, string permName, uint8_t value) {
+        print("Setting Permissions\n");
+    }
+
+    void container::removeperm(account_name target, uint64_t guid, string permName, uint8_t value) {
 //        print("Setting Permissions\n");
     }
 
@@ -457,5 +636,6 @@ namespace secrataContainer {
 
 
 EOSIO_ABI( secrataContainer::container, (create)(update)(invite)(accept)(decline)
-        (remove)(addmessage)(ackmessage)(addfile)(removefile)(ackfile))
+        (remove)(addmessage)(ackmessage)(addfile)(removefile)
+(ackfile)(addtag)(removetag)(lockfile)(unlockfile))
 

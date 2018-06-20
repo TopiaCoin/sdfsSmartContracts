@@ -62,7 +62,7 @@ namespace secrataContainer {
 
         auto workspaceItr = workspaces.begin();
 
-        workspaces.modify(workspaceItr, user, [&](auto& w){
+        workspaces.modify(workspaceItr, user, [&](auto &w) {
             w.description = workspaceDescription;
         });
     }
@@ -272,7 +272,7 @@ namespace secrataContainer {
     // -------- Files --------
 
     void container::addfile(account_name uploader, uint64_t guid, uint128_t parentID, uint128_t fileID,
-                            uint128_t versionID, std::vector<uint128_t> ancestorVersionIDs, string fileMetadata) {
+                            uint128_t versionID, std::vector <uint128_t> ancestorVersionIDs, string fileMetadata) {
 
         require_auth(uploader);
 
@@ -404,15 +404,9 @@ namespace secrataContainer {
     boolean container::workspaceExists(uint64_t guid) {
         workspace_index workspaces(_self, guid);
 
-        // Using the guid index, we find the first entry in the membership table for the lower bounds of the
-        // specified guid. If the iterators guid matches the search guid, the workspace exists.  Otherwise,
-        // it does not.
+        // This workspace exists if there is an entry in the workspace guid scoped table.
 
         return (workspaces.begin() != workspaces.end());
-//        auto guidIdx = workspaces.template get_index<N(byguid)>();
-//        auto matched_guid_itr = guidIdx.lower_bound(guid);
-//        return (matched_guid_itr != guidIdx.end()) &&
-//               (matched_guid_itr->guid == guid);
     }
 
     boolean container::userIsMemberOfWorkspace(account_name user, uint64_t guid, boolean isActive) {
@@ -463,6 +457,5 @@ namespace secrataContainer {
 
 
 EOSIO_ABI( secrataContainer::container, (create)(update)(invite)(accept)(decline)
-        (remove)(addmessage)(ackmessage)(addfile)(removefile)
-(ackfile))
+        (remove)(addmessage)(ackmessage)(addfile)(removefile)(ackfile))
 

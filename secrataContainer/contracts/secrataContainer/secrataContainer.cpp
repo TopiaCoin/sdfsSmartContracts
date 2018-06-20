@@ -272,7 +272,7 @@ namespace secrataContainer {
     // -------- Files --------
 
     void container::addfile(account_name uploader, uint64_t guid, uint128_t parentID, uint128_t fileID,
-                            uint128_t versionID, uint128_t ancestorVersionID, string fileMetadata) {
+                            uint128_t versionID, std::vector<uint128_t> ancestorVersionIDs, string fileMetadata) {
 
         require_auth(uploader);
 
@@ -290,8 +290,10 @@ namespace secrataContainer {
         eosio_assert(parentID == 0 || fileExistsInWorkspace(parentID, guid),
                      "The specified parent file does not exist in this workspace");
 
-        eosio_assert(ancestorVersionID == 0 || fileVersionExistsInWorkspace(fileID, ancestorVersionID, guid),
-                     "The specified ancestor version does not exist in this workspace");
+        for (uint128_t ancestor : ancestorVersionIDs) {
+            eosio_assert(fileVersionExistsInWorkspace(fileID, ancestor, guid),
+                         "The specified ancestor version does not exist in this workspace");
+        }
 
         // TODO - Make sure the uploader has permission to add files to this workspace
 
@@ -302,7 +304,7 @@ namespace secrataContainer {
             f.fileID = fileID;
             f.parentID = parentID;
             f.versionID = versionID;
-            f.parentVersion = ancestorVersionID;
+            f.parentVersions = ancestorVersionIDs;
             f.uploader = uploader;
             f.timestamp = now();
             f.status = 1;
@@ -353,7 +355,7 @@ namespace secrataContainer {
     }
 
     void container::ackfile(account_name user, uint64_t guid, uint128_t fileID, uint128_t versionID) {
-        
+
         require_auth(user);
 
         eosio_assert(workspaceExists(guid),
@@ -393,7 +395,7 @@ namespace secrataContainer {
     // -------- Permissions --------
 
     void container::setperm(account_name target, uint64_t guid, string permName, uint8_t value) {
-        print("Setting Permissions\n");
+//        print("Setting Permissions\n");
     }
 
 

@@ -78,7 +78,7 @@
                 {"name": "parentID", "type": "uint128"},
                 {"name": "fileID", "type": "uint128"},
                 {"name": "versionID", "type": "uint128"},
-                {"name": "ancestorVersionID", "type": "uint128"},
+                {"name": "ancestorVersionID", "type": "uint128[]"},
                 {"name": "fileMetadata", "type": "string"}
             ]
         }, {
@@ -152,7 +152,7 @@
                 {"name": "fileID", "type": "uint128"},
                 {"name": "parentID", "type": "uint128"},
                 {"name": "versionID", "type": "uint128"},
-                {"name": "parentVersions", "type": "uint128"},
+                {"name": "parentVersions", "type": "uint128[]"},
                 {"name": "uploader", "type": "account_name"},
                 {"name": "timestamp", "type": "uint64"},
                 {"name": "status", "type": "uint8"},

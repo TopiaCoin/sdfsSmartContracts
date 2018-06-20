@@ -63,7 +63,7 @@ namespace secrataContainer {
                      uint128_t parentID,
                      uint128_t fileID,
                      uint128_t versionID,
-                     uint128_t ancestorVersionID,
+                     std::vector<uint128_t> ancestorVersionIDs,
                      string fileMetadata);
 
         void removefile(account_name remover,
@@ -176,7 +176,7 @@ namespace secrataContainer {
             uint128_t fileID;
             uint128_t parentID;
             uint128_t versionID;
-            uint128_t parentVersion;
+            std::vector<uint128_t> parentVersions;
             account_name uploader;
             uint64_t timestamp;
             uint8_t status;
@@ -186,7 +186,7 @@ namespace secrataContainer {
 
             uint128_t get_fileID() const { return fileID; }
 
-            EOSLIB_SERIALIZE(file, (id)(fileID)(parentID)(versionID)(parentVersion)(uploader)(timestamp)(status)(metadata)
+            EOSLIB_SERIALIZE(file, (id)(fileID)(parentID)(versionID)(parentVersions)(uploader)(timestamp)(status)(metadata)
             )
         };
 

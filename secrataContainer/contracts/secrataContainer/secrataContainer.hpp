@@ -99,15 +99,17 @@ namespace secrataContainer {
 
         // -------- Permissions --------
 
-        void addperm(account_name target,
+        void addperm(account_name user,
+                     account_name target,
                      uint64_t guid,
                      string permName,
-                     uint8_t value);
+                     string scope);
 
-        void removeperm(account_name target,
+        void removeperm(account_name user,
+                        account_name target,
                         uint64_t guid,
                         string permName,
-                        uint8_t value);
+                        string scope);
 
     private:
 
@@ -118,6 +120,13 @@ namespace secrataContainer {
         boolean fileExistsInWorkspace(uint128_t fileID, uint64_t guid);
 
         boolean fileVersionExistsInWorkspace(uint128_t fileID, uint128_t versionID, uint64_t guid);
+
+        boolean userHasPermission(uint64_t guid, account_name user, uint64_t permType);
+        boolean userHasPermission(uint64_t guid, account_name user, uint64_t permType, uint128_t scope);
+        boolean userHasPermission(uint64_t guid, account_name user, uint64_t permType, account_name scope);
+        boolean userHasPermission(uint64_t guid, account_name user, uint64_t permType, string scope);
+
+        boolean userOwnsWorkspace(uint64_t guid, account_name user);
 
 
         //@abi table
@@ -268,20 +277,27 @@ namespace secrataContainer {
         //@abi table
         struct permission {
             uint64_t id;
+            uint64_t permissionType;
             account_name user;
-            string name;
-            uint8_t value;
+            string scope;
 
             uint64_t primary_key() const { return id; }
 
+            uint128_t get_permType_user() const {
+                uint128_t key = permissionType ;
+                key = key << 64 | user ;
+                return key;
+            }
+
             account_name get_user() const { return user; }
 
-            EOSLIB_SERIALIZE(permission, (id)(user)(name)(value)
+            EOSLIB_SERIALIZE(permission, (id)(permissionType)(user)(scope)
             )
         };
 
         typedef eosio::multi_index<N(permissions), permission,
-                indexed_by < N(byuser), const_mem_fun < permission, account_name, &permission::get_user> > >
+                indexed_by < N(byuser), const_mem_fun < permission, account_name, &permission::get_user> >,
+                indexed_by < N(bypermuser), const_mem_fun < permission, uint128_t, &permission::get_permType_user> > >
         permission_index;
     };
 

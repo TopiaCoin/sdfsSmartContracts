@@ -49,8 +49,6 @@ namespace secrataContainer {
             membership.status = 1;
             membership.key = key;
         });
-
-        // TODO - Assign all permissions to the creator
     }
 
     void container::update(account_name user,
@@ -64,7 +62,8 @@ namespace secrataContainer {
         eosio_assert(userIsMemberOfWorkspace(user, guid, true),
                      "You are not a member of the workspace");
 
-        // TODO - Make sure user has permission to update the description
+        eosio_assert(userHasPermission(guid, user, N(updatewks)),
+                     "User does not have permission to update the workspace") ;
 
         workspace_index workspaces(_self, guid);
 
@@ -82,6 +81,8 @@ namespace secrataContainer {
                            uint64_t guid,
                            string key) {
 
+        // TODO - Should this method assign default permissions, or require permissions to be passed in?
+
         require_auth(inviter);
 
         eosio_assert(workspaceExists(guid),
@@ -90,9 +91,8 @@ namespace secrataContainer {
         eosio_assert(userIsMemberOfWorkspace(inviter, guid, true),
                      "You are not a member of the workspace");
 
-        // TODO - Make sure inviter has permission to invite
-
-        // TODO - Should this method assign default permissions, or require permissions to be passed in?
+        eosio_assert(userHasPermission(guid, inviter, N(invite), invitee),
+                     "User does not have permission to invite users to this workspace");
 
         membership_index memberships(_self, guid);
 
@@ -196,7 +196,8 @@ namespace secrataContainer {
         eosio_assert(userIsMemberOfWorkspace(remover, guid, true),
                      "You are not a member of the workspace");
 
-        // TODO - Make sure remover has permission to remove the member
+        eosio_assert(userHasPermission(guid, remover, N(remove), member),
+                     "User does not have permission to remove members from the workspace");
 
         membership_index memberships(_self, guid);
 
@@ -228,6 +229,9 @@ namespace secrataContainer {
 
         eosio_assert(userIsMemberOfWorkspace(author, guid, true),
                      "You are not a member of the workspace");
+
+        eosio_assert(userHasPermission(guid, author, N(addmessage)),
+                     "User does not have permission to add messages to the workspace");
 
         message_index messages(_self, guid);
 
@@ -322,7 +326,8 @@ namespace secrataContainer {
                          "The specified ancestor version does not exist in this workspace");
         }
 
-        // TODO - Make sure the uploader has permission to add files to this workspace
+        eosio_assert(userHasPermission(guid, uploader, N(addfile)),
+                     "User does not have permission to add files to the workspace");
 
         file_index files(_self, guid);
 
@@ -357,7 +362,8 @@ namespace secrataContainer {
         eosio_assert(versionID == 0 || fileVersionExistsInWorkspace(fileID, versionID, guid),
                      "The specified file version does not exist in this workspace");
 
-        // TODO - Make sure the uploader has permission to remove files from this workspace
+        eosio_assert(userHasPermission(guid, remover, N(removefile)),
+                     "User does not have permission to remove files from the workspace");
 
         file_index files(_self, guid);
 
@@ -438,7 +444,8 @@ namespace secrataContainer {
 
         eosio_assert(fileExistsInWorkspace(fileID, guid), "The specified file does not exist in this workspace");
 
-        // TODO - Check to see if the user has permission to lock files
+        eosio_assert(userHasPermission(guid, user, N(lockfile)),
+                     "User does not have permission to lock files in the workspace");
 
         file_index files(_self, guid);
 
@@ -495,7 +502,8 @@ namespace secrataContainer {
 
         eosio_assert(fileExistsInWorkspace(fileID, guid), "The specified file does not exist in this workspace");
 
-        // TODO - Check to see if the user has permission to add tags to files.
+        eosio_assert(userHasPermission(guid, user, N(addtag)),
+                     "User does not have permission to add file tags in the workspace");
 
         fileTag_index fileTags(_self, guid);
 
@@ -542,7 +550,8 @@ namespace secrataContainer {
         eosio_assert(fileExistsInWorkspace(fileID, guid), "The specified file does not exist in this workspace");
 
         if (isPublic) {
-            // TODO - Check to see if the user has permission to add tags to files.
+            eosio_assert(userHasPermission(guid, user, N(addtag)),
+                         "User does not have permission to remove file tags in the workspace");
         }
 
         fileTag_index fileTags(_self, guid);
@@ -569,12 +578,82 @@ namespace secrataContainer {
 
     // -------- Permissions --------
 
-    void container::addperm(account_name target, uint64_t guid, string permName, uint8_t value) {
+    void container::addperm(account_name user, account_name target, uint64_t guid, string permName, string scope) {
         print("Setting Permissions\n");
+
+        require_auth(user) ;
+
+        eosio_assert(workspaceExists(guid),
+                     "The specified workspace does not exist");
+
+        eosio_assert(userIsMemberOfWorkspace(user, guid, true),
+                     "You are not a member of the workspace");
+
+        // TODO - Re-enable this assertion once we have enabled full creator permissions
+//        eosio_assert(userHasPermission(guid, user, N(updateperm), target),
+//                     "User does not have permission to modify user permissions in the workspace");
+
+        uint64_t permType = eosio::string_to_name(permName.c_str());
+
+        uint128_t key = permType ;
+        key = key << 64 | target ;
+
+        permission_index permissions(_self, guid) ;
+
+        auto permUserIdx = permissions.template get_index<N(bypermuser)>();
+        auto matchingPerm = permUserIdx.lower_bound(key);
+
+        while (matchingPerm != permUserIdx.end() && matchingPerm->permissionType == permType && matchingPerm->user == target && matchingPerm->scope != scope) {
+            matchingPerm++ ;
+        }
+
+        if ( matchingPerm == permUserIdx.end() ) {
+            // Add the user's permission
+            permissions.emplace(user, [&](auto& p){
+                p.id = permissions.available_primary_key();
+                p.permissionType = permType;
+                p.user = target;
+                p.scope = scope;
+            });
+        }
+
+        print("Set Permissions\n");
     }
 
-    void container::removeperm(account_name target, uint64_t guid, string permName, uint8_t value) {
-//        print("Setting Permissions\n");
+    void container::removeperm(account_name user, account_name target, uint64_t guid, string permName, string scope) {
+        print("Removing Permissions\n");
+
+        require_auth(user) ;
+
+        eosio_assert(workspaceExists(guid),
+                     "The specified workspace does not exist");
+
+        eosio_assert(userIsMemberOfWorkspace(user, guid, true),
+                     "You are not a member of the workspace");
+
+        // TODO - Re-enable this assertion once we have enabled full creator permissions
+//        eosio_assert(userHasPermission(guid, user, N(updateperm), target),
+//                     "User does not have permission to modify user permissions in the workspace");
+
+        uint64_t permType = eosio::string_to_name(permName.c_str());
+
+        uint128_t key = permType ;
+        key = key << 64 | target ;
+
+        permission_index permissions(_self, guid) ;
+
+        auto permUserIdx = permissions.template get_index<N(bypermuser)>();
+        auto matchingPerm = permUserIdx.lower_bound(key);
+
+        while (matchingPerm != permUserIdx.end() && matchingPerm->permissionType == permType && matchingPerm->user == target && matchingPerm->scope != scope) {
+            matchingPerm++ ;
+        }
+
+        eosio_assert ( matchingPerm != permUserIdx.end(), "The specified permission does not exist" );
+
+        permUserIdx.erase(matchingPerm) ;
+
+        print("Removed Permission\n");
     }
 
 
@@ -632,10 +711,56 @@ namespace secrataContainer {
 
         return found;
     }
+
+    boolean container::userHasPermission(uint64_t guid, account_name user, uint64_t permType) {
+        return userHasPermission(guid, user, permType, "");
+    }
+
+    boolean container::userHasPermission(uint64_t guid, account_name user, uint64_t permType, uint128_t scope) {
+        std::stringstream ss ;
+        ss << scope ;
+        string scopeStr = ss.str() ;
+        return userHasPermission(guid, user, permType, scopeStr);
+    }
+
+    boolean container::userHasPermission(uint64_t guid, account_name user, uint64_t permType, account_name scope) {
+        std::stringstream ss ;
+        ss << scope ;
+        string scopeStr = ss.str() ;
+        return userHasPermission(guid, user, permType, scopeStr);
+    }
+
+    boolean container::userHasPermission(uint64_t guid, account_name user, uint64_t permType, string scope) {
+        permission_index permissions(_self, guid) ;
+
+        uint128_t key = permType ;
+        key = key << 64 | user ;
+
+        auto permUserIdx = permissions.template get_index<N(bypermuser)>();
+        auto matchingPerm = permUserIdx.lower_bound(key) ;
+
+        // TODO - Re-enable full creator permissions
+        boolean hasPerm = false ;//userOwnsWorkspace(guid, user) ;
+
+        while ( !hasPerm && matchingPerm != permUserIdx.end() && matchingPerm->user == user && matchingPerm->permissionType == permType) {
+            hasPerm = (matchingPerm->scope.empty() || matchingPerm->scope == scope) ;
+            matchingPerm++ ;
+        }
+
+        return hasPerm ;
+    }
+
+    boolean container::userOwnsWorkspace(uint64_t guid, account_name user) {
+        workspace_index  workspaces(_self, guid);
+
+        auto workspaceInfo = workspaces.begin();
+
+        return ( workspaceInfo != workspaces.end() && workspaceInfo->owner == user) ;
+    }
 }
 
 
 EOSIO_ABI( secrataContainer::container, (create)(update)(invite)(accept)(decline)
         (remove)(addmessage)(ackmessage)(addfile)(removefile)
-(ackfile)(addtag)(removetag)(lockfile)(unlockfile))
+(ackfile)(addtag)(removetag)(lockfile)(unlockfile)(addperm)(removeperm))
 

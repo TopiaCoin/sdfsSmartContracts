@@ -140,7 +140,17 @@
                 {"name": "guid", "type": "uint64"},
                 {"name": "fileID", "type": "uint128"}
             ]
-         },
+        },{
+            "name": "permissionAction",
+            "base": "",
+            "fields": [
+                {"name": "user", "type": "account_name"},
+                {"name": "target", "type": "account_name"},
+                {"name": "guid", "type": "uint64"},
+                {"name": "permName", "type": "string"},
+                {"name": "scope", "type": "string"}
+            ]
+        }
 
 		{
 			"name": "workspaceRow",
@@ -222,6 +232,16 @@
                 {"name": "scope", "type": "uint64"},
                 {"name": "value", "type": "string"},
             ]
+        },
+        {
+            "name": "permissionRow",
+            "base": "",
+            "fields": [
+                {"name": "id", "type": "uint64"},
+                {"name": "permType", "type": "account_name"},
+                {"name": "user", "type": "account_name"},
+                {"name": "scope", "type": "string"}
+            ]
         }
 	],
 	"actions": [{
@@ -283,6 +303,14 @@
         {
             "name": "unlockfile",
             "type": "unlockFileAction"
+        },
+        {
+            "name": "addperm",
+            "type": "permissionAction"
+        },
+        {
+            "name": "removeperm",
+            "type": "permissionAction"
         }
 
 	],
@@ -356,6 +384,18 @@
             "uint128"
         ],
         "type": "fileTagRow"
+    },{
+        "name": "permissions",
+        "index_type": "i64",
+        "key_names": [
+            "user",
+            "permuser"
+        ],
+        "key_types": [
+            "uint64",
+            "uint128"
+        ],
+        "type": "permissionRow"
     }],
 	"ricardian_clauses": []
 }

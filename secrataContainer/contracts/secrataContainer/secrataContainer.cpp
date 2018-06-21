@@ -103,15 +103,7 @@ namespace secrataContainer {
             matched_guid_itr++;
         }
 
-        if (matched_guid_itr != guidIdx.end() && matched_guid_itr->user == invitee && matched_guid_itr->status == 2) {
-            // Update the existing record, if the record we found was for a previously removed member.
-            // Pending and Active membership records will not be changed.
-            guidIdx.modify(matched_guid_itr, inviter, [&](auto &m) {
-                m.inviter = inviter;
-                m.status = 0;
-                m.key = key;
-            });
-        } else if (matched_guid_itr == guidIdx.end() || matched_guid_itr->user != invitee) {
+        if (matched_guid_itr == guidIdx.end() || matched_guid_itr->user != invitee) {
             // Add a new member record for the invitee
             memberships.emplace(inviter, [&](auto &m) {
                 m.id = memberships.available_primary_key();
@@ -153,7 +145,7 @@ namespace secrataContainer {
             matched_guid_itr++;
         }
 
-        eosio_assert(matched_guid_itr->user == invitee && matched_guid_itr->status == 0,
+        eosio_assert(matched_guid_itr != guidIdx.end() && matched_guid_itr->user == invitee && matched_guid_itr->status == 0,
                      "No Pending Invite found for the specified user and workspace");
 
         // Update the existing record, to mark the user as active.
@@ -486,7 +478,7 @@ namespace secrataContainer {
         auto matchingFile = fileIDIdx.lower_bound(fileID);
 
         eosio_assert(matchingFile->lockOwner == 0 || matchingFile->lockOwner == user,
-                     "You do no hold the lock on this file");
+                     "You do not hold the lock on this file");
 
         fileIDIdx.modify(matchingFile, user, [&](auto &f) {
             f.lockOwner = 0;
@@ -601,9 +593,8 @@ namespace secrataContainer {
         eosio_assert(userIsMemberOfWorkspace(user, guid, true),
                      "You are not a member of the workspace");
 
-        // TODO - Re-enable this assertion once we have enabled full creator permissions
-//        eosio_assert(userHasPermission(guid, user, N(updateperm), target),
-//                     "User does not have permission to modify user permissions in the workspace");
+        eosio_assert(userHasPermission(guid, user, N(updateperm), target),
+                     "User does not have permission to modify user permissions in the workspace");
 
         if ( internalAddPerm(user, target, guid, permName, scope) ) {
             print("Added Permissions\n");
@@ -624,9 +615,8 @@ namespace secrataContainer {
         eosio_assert(userIsMemberOfWorkspace(user, guid, true),
                      "You are not a member of the workspace");
 
-        // TODO - Re-enable this assertion once we have enabled full creator permissions
-//        eosio_assert(userHasPermission(guid, user, N(updateperm), target),
-//                     "User does not have permission to modify user permissions in the workspace");
+        eosio_assert(userHasPermission(guid, user, N(updateperm), target),
+                     "User does not have permission to modify user permissions in the workspace");
 
         if (internalRemovePerm(user, target, guid, permName, scope) ) {
             print("Removed Permission");
@@ -647,9 +637,8 @@ namespace secrataContainer {
         eosio_assert(userIsMemberOfWorkspace(user, guid, true),
                      "You are not a member of the workspace");
 
-        // TODO - Re-enable this assertion once we have enabled full creator permissions
-//        eosio_assert(userHasPermission(guid, user, N(updateperm), target),
-//                     "User does not have permission to modify user permissions in the workspace");
+        eosio_assert(userHasPermission(guid, user, N(updateperm), target),
+                     "User does not have permission to modify user permissions in the workspace");
 
         for (userPermission p : permissions) {
             internalAddPerm(user, target, guid, p.permName, p.scope);
@@ -669,9 +658,8 @@ namespace secrataContainer {
         eosio_assert(userIsMemberOfWorkspace(user, guid, true),
                      "You are not a member of the workspace");
 
-        // TODO - Re-enable this assertion once we have enabled full creator permissions
-//        eosio_assert(userHasPermission(guid, user, N(updateperm), target),
-//                     "User does not have permission to modify user permissions in the workspace");
+        eosio_assert(userHasPermission(guid, user, N(updateperm), target),
+                     "User does not have permission to modify user permissions in the workspace");
 
         for (userPermission p : permissions) {
             internalRemovePerm(user, target, guid, p.permName, p.scope);
@@ -815,9 +803,8 @@ namespace secrataContainer {
     }
 
     boolean container::userHasPermission(uint64_t guid, account_name user, uint64_t permType, account_name scope) {
-        std::stringstream ss;
-        ss << scope;
-        string scopeStr = ss.str();
+        eosio::name n{scope};
+        string scopeStr = n.to_string();//ss.str();
         return userHasPermission(guid, user, permType, scopeStr);
     }
 
@@ -830,8 +817,7 @@ namespace secrataContainer {
         auto permUserIdx = permissions.template get_index<N(bypermuser)>();
         auto matchingPerm = permUserIdx.lower_bound(key);
 
-        // TODO - Re-enable full creator permissions
-        boolean hasPerm = false;//userOwnsWorkspace(guid, user) ;
+        boolean hasPerm = userOwnsWorkspace(guid, user) ;
 
         while (!hasPerm && matchingPerm != permUserIdx.end() && matchingPerm->user == user &&
                matchingPerm->permissionType == permType) {

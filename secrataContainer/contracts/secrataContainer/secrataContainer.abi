@@ -151,6 +151,15 @@
                 {"name": "permName", "type": "string"},
                 {"name": "scope", "type": "string"}
             ]
+        },{
+            "name": "permissionsAction",
+            "base": "",
+            "fields": [
+                {"name": "user", "type": "account_name"},
+                {"name": "target", "type": "account_name"},
+                {"name": "guid", "type": "uint64"},
+                {"name": "permissions", "type": "userPermission[]"}
+            ]
         },
 
         {
@@ -321,6 +330,14 @@
         {
             "name": "removeperm",
             "type": "permissionAction"
+        },
+        {
+            "name": "addperms",
+            "type": "permissionsAction"
+        },
+        {
+            "name": "removeperms",
+            "type": "permissionsAction"
         }
 
 	],

@@ -63,7 +63,7 @@ namespace secrataContainer {
                      "You are not a member of the workspace");
 
         eosio_assert(userHasPermission(guid, user, N(updatewks)),
-                     "User does not have permission to update the workspace") ;
+                     "User does not have permission to update the workspace");
 
         workspace_index workspaces(_self, guid);
 
@@ -80,7 +80,7 @@ namespace secrataContainer {
                            account_name invitee,
                            uint64_t guid,
                            string key,
-                           std::vector<userPermission> permissions) {
+                           std::vector <userPermission> permissions) {
 
         require_auth(inviter);
 
@@ -122,7 +122,7 @@ namespace secrataContainer {
             });
         } else {
             // The invitee is either already a member of the workspace, or has already been invited.
-            eosio_assert(false, "The user has already been invited to this workspace");
+            return ;
         }
 
         // Clear the invitees existing permissions and assign the given permissions.
@@ -519,14 +519,14 @@ namespace secrataContainer {
         auto fileIDIdx = fileTags.template get_index<N(byverid)>();
         auto matchingTag = fileIDIdx.lower_bound(versionID);
 
-        uint64_t targetScope = user ;
-        if ( isPublic ) {
+        uint64_t targetScope = user;
+        if (isPublic) {
             targetScope = N(public);
         }
 
-        cout << ((const char*)"Target Scope: ") << targetScope << ((const char *)"\n") ;
+        cout << ((const char *) "Target Scope: ") << targetScope << ((const char *) "\n");
 
-        while (matchingTag != fileIDIdx.end() && matchingTag->versionID == versionID && matchingTag->fileID == fileID ) {
+        while (matchingTag != fileIDIdx.end() && matchingTag->versionID == versionID && matchingTag->fileID == fileID) {
             eosio_assert(matchingTag->scope != targetScope || matchingTag->value != value,
                          "The specified tag already exists");
             matchingTag++;
@@ -568,29 +568,32 @@ namespace secrataContainer {
         auto fileIDIdx = fileTags.template get_index<N(byverid)>();
         auto matchingTag = fileIDIdx.lower_bound(versionID);
 
-        uint64_t targetScope = user ;
-        if ( isPublic ) {
+        uint64_t targetScope = user;
+        if (isPublic) {
             targetScope = N(public);
         }
 
-        cout << ((const char*)"Target Scope: ") << targetScope << ((const char *)"\n") ;
+        cout << ((const char *) "Target Scope: ") << targetScope << ((const char *) "\n");
 
         while (matchingTag != fileIDIdx.end() && matchingTag->versionID == versionID && matchingTag->fileID == fileID &&
-                (matchingTag->scope != targetScope || matchingTag->value != value)) {
+               (matchingTag->scope != targetScope || matchingTag->value != value)) {
             matchingTag++;
         }
 
-        eosio_assert (matchingTag != fileIDIdx.end(), "The specified tag does not exist") ;
+        eosio_assert(matchingTag != fileIDIdx.end(), "The specified tag does not exist");
 
         fileIDIdx.erase(matchingTag);
     }
 
     // -------- Permissions --------
 
-    void container::addperm(account_name user, account_name target, uint64_t guid, string permName, string scope) {
-        print("Setting Permissions\n");
+    void container::addperm(account_name user,
+                            account_name target,
+                            uint64_t guid,
+                            string permName,
+                            string scope) {
 
-        require_auth(user) ;
+        require_auth(user);
 
         eosio_assert(workspaceExists(guid),
                      "The specified workspace does not exist");
@@ -602,68 +605,146 @@ namespace secrataContainer {
 //        eosio_assert(userHasPermission(guid, user, N(updateperm), target),
 //                     "User does not have permission to modify user permissions in the workspace");
 
+        if ( internalAddPerm(user, target, guid, permName, scope) ) {
+            print("Added Permissions\n");
+        }
+    }
+
+    void container::removeperm(account_name user,
+                               account_name target,
+                               uint64_t guid,
+                               string permName,
+                               string scope) {
+
+        require_auth(user);
+
+        eosio_assert(workspaceExists(guid),
+                     "The specified workspace does not exist");
+
+        eosio_assert(userIsMemberOfWorkspace(user, guid, true),
+                     "You are not a member of the workspace");
+
+        // TODO - Re-enable this assertion once we have enabled full creator permissions
+//        eosio_assert(userHasPermission(guid, user, N(updateperm), target),
+//                     "User does not have permission to modify user permissions in the workspace");
+
+        if (internalRemovePerm(user, target, guid, permName, scope) ) {
+            print("Removed Permission");
+        }
+    }
+
+
+    void container::addperms(account_name user,
+                            account_name target,
+                            uint64_t guid,
+                            std::vector <userPermission> permissions) {
+
+        require_auth(user);
+
+        eosio_assert(workspaceExists(guid),
+                     "The specified workspace does not exist");
+
+        eosio_assert(userIsMemberOfWorkspace(user, guid, true),
+                     "You are not a member of the workspace");
+
+        // TODO - Re-enable this assertion once we have enabled full creator permissions
+//        eosio_assert(userHasPermission(guid, user, N(updateperm), target),
+//                     "User does not have permission to modify user permissions in the workspace");
+
+        for (userPermission p : permissions) {
+            internalAddPerm(user, target, guid, p.permName, p.scope);
+        }
+    }
+
+    void container::removeperms(account_name user,
+                                account_name target,
+                                uint64_t guid,
+                                std::vector <userPermission> permissions) {
+
+        require_auth(user);
+
+        eosio_assert(workspaceExists(guid),
+                     "The specified workspace does not exist");
+
+        eosio_assert(userIsMemberOfWorkspace(user, guid, true),
+                     "You are not a member of the workspace");
+
+        // TODO - Re-enable this assertion once we have enabled full creator permissions
+//        eosio_assert(userHasPermission(guid, user, N(updateperm), target),
+//                     "User does not have permission to modify user permissions in the workspace");
+
+        for (userPermission p : permissions) {
+            internalRemovePerm(user, target, guid, p.permName, p.scope);
+        }
+    }
+
+
+    boolean container::internalAddPerm(account_name user,
+                                       account_name target,
+                                       uint64_t guid,
+                                       string permName,
+                                       string scope) {
+        boolean added = false ;
+
         uint64_t permType = eosio::string_to_name(permName.c_str());
 
-        uint128_t key = permType ;
-        key = key << 64 | target ;
+        uint128_t key = permType;
+        key = key << 64 | target;
 
-        permission_index permissions(_self, guid) ;
+        permission_index permissions(_self, guid);
 
         auto permUserIdx = permissions.template get_index<N(bypermuser)>();
         auto matchingPerm = permUserIdx.lower_bound(key);
 
-        while (matchingPerm != permUserIdx.end() && matchingPerm->permissionType == permType && matchingPerm->user == target && matchingPerm->scope != scope) {
-            matchingPerm++ ;
+        while (matchingPerm != permUserIdx.end() && matchingPerm->permissionType == permType &&
+               matchingPerm->user == target && matchingPerm->scope != scope) {
+            matchingPerm++;
         }
 
-        if ( matchingPerm == permUserIdx.end() || matchingPerm->permissionType != permType || matchingPerm->user != target || matchingPerm->scope != scope) {
+        if (matchingPerm == permUserIdx.end() || matchingPerm->permissionType != permType ||
+            matchingPerm->user != target || matchingPerm->scope != scope) {
             // Add the user's permission
-            permissions.emplace(user, [&](auto& p){
+            permissions.emplace(user, [&](auto &p) {
                 p.id = permissions.available_primary_key();
                 p.permissionType = permType;
                 p.user = target;
                 p.scope = scope;
             });
-            print("Set Permissions\n");
-        } else {
-            print("Permission already set");
+            added = true ;
         }
+
+        return added;
     }
 
-    void container::removeperm(account_name user, account_name target, uint64_t guid, string permName, string scope) {
-        print("Removing Permissions\n");
 
-        require_auth(user) ;
-
-        eosio_assert(workspaceExists(guid),
-                     "The specified workspace does not exist");
-
-        eosio_assert(userIsMemberOfWorkspace(user, guid, true),
-                     "You are not a member of the workspace");
-
-        // TODO - Re-enable this assertion once we have enabled full creator permissions
-//        eosio_assert(userHasPermission(guid, user, N(updateperm), target),
-//                     "User does not have permission to modify user permissions in the workspace");
+    boolean container::internalRemovePerm(account_name user,
+                                          account_name target,
+                                          uint64_t guid,
+                                          string permName,
+                                          string scope) {
+        boolean removed = false ;
 
         uint64_t permType = eosio::string_to_name(permName.c_str());
 
-        uint128_t key = permType ;
-        key = key << 64 | target ;
+        uint128_t key = permType;
+        key = key << 64 | target;
 
-        permission_index permissions(_self, guid) ;
+        permission_index permissions(_self, guid);
 
         auto permUserIdx = permissions.template get_index<N(bypermuser)>();
         auto matchingPerm = permUserIdx.lower_bound(key);
 
-        while (matchingPerm != permUserIdx.end() && matchingPerm->permissionType == permType && matchingPerm->user == target && matchingPerm->scope != scope) {
-            matchingPerm++ ;
+        while (matchingPerm != permUserIdx.end() && matchingPerm->permissionType == permType &&
+               matchingPerm->user == target && matchingPerm->scope != scope) {
+            matchingPerm++;
         }
 
-        eosio_assert ( matchingPerm != permUserIdx.end(), "The specified permission does not exist" );
+        if (matchingPerm != permUserIdx.end() ) {
+            permUserIdx.erase(matchingPerm);
+            removed = true ;
+        }
 
-        permUserIdx.erase(matchingPerm) ;
-
-        print("Removed Permission\n");
+        return removed;
     }
 
 
@@ -727,54 +808,55 @@ namespace secrataContainer {
     }
 
     boolean container::userHasPermission(uint64_t guid, account_name user, uint64_t permType, uint128_t scope) {
-        std::stringstream ss ;
-        ss << scope ;
-        string scopeStr = ss.str() ;
+        std::stringstream ss;
+        ss << scope;
+        string scopeStr = ss.str();
         return userHasPermission(guid, user, permType, scopeStr);
     }
 
     boolean container::userHasPermission(uint64_t guid, account_name user, uint64_t permType, account_name scope) {
-        std::stringstream ss ;
-        ss << scope ;
-        string scopeStr = ss.str() ;
+        std::stringstream ss;
+        ss << scope;
+        string scopeStr = ss.str();
         return userHasPermission(guid, user, permType, scopeStr);
     }
 
     boolean container::userHasPermission(uint64_t guid, account_name user, uint64_t permType, string scope) {
-        permission_index permissions(_self, guid) ;
+        permission_index permissions(_self, guid);
 
-        uint128_t key = permType ;
-        key = key << 64 | user ;
+        uint128_t key = permType;
+        key = key << 64 | user;
 
         auto permUserIdx = permissions.template get_index<N(bypermuser)>();
-        auto matchingPerm = permUserIdx.lower_bound(key) ;
+        auto matchingPerm = permUserIdx.lower_bound(key);
 
         // TODO - Re-enable full creator permissions
-        boolean hasPerm = false ;//userOwnsWorkspace(guid, user) ;
+        boolean hasPerm = false;//userOwnsWorkspace(guid, user) ;
 
-        while ( !hasPerm && matchingPerm != permUserIdx.end() && matchingPerm->user == user && matchingPerm->permissionType == permType) {
-            hasPerm = (matchingPerm->scope.empty() || matchingPerm->scope == scope) ;
-            matchingPerm++ ;
+        while (!hasPerm && matchingPerm != permUserIdx.end() && matchingPerm->user == user &&
+               matchingPerm->permissionType == permType) {
+            hasPerm = (matchingPerm->scope.empty() || matchingPerm->scope == scope);
+            matchingPerm++;
         }
 
-        return hasPerm ;
+        return hasPerm;
     }
 
     boolean container::userOwnsWorkspace(uint64_t guid, account_name user) {
-        workspace_index  workspaces(_self, guid);
+        workspace_index workspaces(_self, guid);
 
         auto workspaceInfo = workspaces.begin();
 
-        return ( workspaceInfo != workspaces.end() && workspaceInfo->owner == user) ;
+        return (workspaceInfo != workspaces.end() && workspaceInfo->owner == user);
     }
 
-    void container::removeAllUserPermissions(uint64_t guid, account_name user){
-        permission_index permissions(_self, guid) ;
+    void container::removeAllUserPermissions(uint64_t guid, account_name user) {
+        permission_index permissions(_self, guid);
 
         auto nameIdx = permissions.template get_index<N(byuser)>();
         auto matchingPerm = nameIdx.lower_bound(user);
 
-        while ( matchingPerm != nameIdx.end() && matchingPerm->user == user) {
+        while (matchingPerm != nameIdx.end() && matchingPerm->user == user) {
             matchingPerm = nameIdx.erase(matchingPerm);
         }
     }
@@ -783,5 +865,6 @@ namespace secrataContainer {
 
 EOSIO_ABI( secrataContainer::container, (create)(update)(invite)(accept)(decline)
         (remove)(addmessage)(ackmessage)(addfile)(removefile)
-(ackfile)(addtag)(removetag)(lockfile)(unlockfile)(addperm)(removeperm))
+        (ackfile)(addtag)(removetag)(lockfile)(unlockfile)(addperm)
+(removeperm)(addperms)(removeperms))
 

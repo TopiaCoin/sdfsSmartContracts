@@ -41,7 +41,7 @@ namespace secrataContainer {
                     account_name invitee,
                     uint64_t guid,
                     string key,
-                    std::vector<userPermission> permissions);
+                    std::vector <userPermission> permissions);
 
         void accept(account_name invitee,
                     uint64_t guid);
@@ -119,6 +119,17 @@ namespace secrataContainer {
                         string permName,
                         string scope);
 
+        void addperms(account_name user,
+                      account_name target,
+                      uint64_t guid,
+                      std::vector <userPermission> permissions);
+
+        void removeperms(account_name user,
+                         account_name target,
+                         uint64_t guid,
+                         std::vector <userPermission> permissions);
+
+
     private:
 
         boolean workspaceExists(uint64_t guid);
@@ -130,14 +141,28 @@ namespace secrataContainer {
         boolean fileVersionExistsInWorkspace(uint128_t fileID, uint128_t versionID, uint64_t guid);
 
         boolean userHasPermission(uint64_t guid, account_name user, uint64_t permType);
+
         boolean userHasPermission(uint64_t guid, account_name user, uint64_t permType, uint128_t scope);
+
         boolean userHasPermission(uint64_t guid, account_name user, uint64_t permType, account_name scope);
+
         boolean userHasPermission(uint64_t guid, account_name user, uint64_t permType, string scope);
 
         boolean userOwnsWorkspace(uint64_t guid, account_name user);
 
-        void removeAllUserPermissions(uint64_t guid, account_name user);
+        boolean internalAddPerm(account_name user,
+                                account_name target,
+                                uint64_t guid,
+                                string permName,
+                                string scope);
 
+        boolean internalRemovePerm(account_name user,
+                                   account_name target,
+                                   uint64_t guid,
+                                   string permName,
+                                   string scope);
+
+        void removeAllUserPermissions(uint64_t guid, account_name user);
 
 
         //@abi table
@@ -282,7 +307,7 @@ namespace secrataContainer {
 
         typedef eosio::multi_index<N(filetags), fileTag,
                 indexed_by < N(byfileid), const_mem_fun < fileTag, uint128_t, &fileTag::get_fileID> >,
-        indexed_by < N(byverid), const_mem_fun < fileTag, uint128_t, &fileTag::get_versionID> > >
+        indexed_by<N(byverid), const_mem_fun < fileTag, uint128_t, &fileTag::get_versionID> > >
         fileTag_index;
 
         //@abi table
@@ -295,8 +320,8 @@ namespace secrataContainer {
             uint64_t primary_key() const { return id; }
 
             uint128_t get_permType_user() const {
-                uint128_t key = permissionType ;
-                key = key << 64 | user ;
+                uint128_t key = permissionType;
+                key = key << 64 | user;
                 return key;
             }
 
@@ -308,7 +333,7 @@ namespace secrataContainer {
 
         typedef eosio::multi_index<N(permissions), permission,
                 indexed_by < N(byuser), const_mem_fun < permission, account_name, &permission::get_user> >,
-                indexed_by < N(bypermuser), const_mem_fun < permission, uint128_t, &permission::get_permType_user> > >
+        indexed_by<N(bypermuser), const_mem_fun < permission, uint128_t, &permission::get_permType_user> > >
         permission_index;
     };
 

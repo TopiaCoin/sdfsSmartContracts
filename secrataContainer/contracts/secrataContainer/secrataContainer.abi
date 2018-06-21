@@ -31,7 +31,8 @@
 				{"name": "inviter", "type": "account_name"},
 				{"name": "invitee", "type": "account_name"},
 				{"name": "guid", "type": "uint64"},
-				{"name": "key", "type": "string"}
+				{"name": "key", "type": "string"},
+				{"name": "permissions", "type": "userPermission[]"}
 			]
 		}, {
 			"name": "acceptAction",
@@ -150,7 +151,16 @@
                 {"name": "permName", "type": "string"},
                 {"name": "scope", "type": "string"}
             ]
-        }
+        },
+
+        {
+            "name": "userPermission",
+            "base": "",
+            "fields": [
+                {"name": "permName", "type": "string"},
+                {"name": "scope", "type": "string"}
+            ]
+        },
 
 		{
 			"name": "workspaceRow",

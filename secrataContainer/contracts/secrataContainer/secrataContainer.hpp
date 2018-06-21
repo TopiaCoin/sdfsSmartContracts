@@ -15,6 +15,13 @@ namespace secrataContainer {
     typedef uint8_t boolean;
 
     class container : public eosio::contract {
+
+    private:
+        struct userPermission {
+            string permName;
+            string scope;
+        };
+
     public:
         container(account_name self) : contract(self) {}
 
@@ -33,7 +40,8 @@ namespace secrataContainer {
         void invite(account_name inviter,
                     account_name invitee,
                     uint64_t guid,
-                    string key);
+                    string key,
+                    std::vector<userPermission> permissions);
 
         void accept(account_name invitee,
                     uint64_t guid);
@@ -127,6 +135,9 @@ namespace secrataContainer {
         boolean userHasPermission(uint64_t guid, account_name user, uint64_t permType, string scope);
 
         boolean userOwnsWorkspace(uint64_t guid, account_name user);
+
+        void removeAllUserPermissions(uint64_t guid, account_name user);
+
 
 
         //@abi table

@@ -79,9 +79,8 @@ namespace secrataContainer {
     void container::invite(account_name inviter,
                            account_name invitee,
                            uint64_t guid,
-                           string key) {
-
-        // TODO - Should this method assign default permissions, or require permissions to be passed in?
+                           string key,
+                           std::vector<userPermission> permissions) {
 
         require_auth(inviter);
 
@@ -123,6 +122,13 @@ namespace secrataContainer {
             });
         } else {
             // The invitee is either already a member of the workspace, or has already been invited.
+            eosio_assert(false, "The user has already been invited to this workspace");
+        }
+
+        // Clear the invitees existing permissions and assign the given permissions.
+        removeAllUserPermissions(guid, invitee);
+        for (userPermission p : permissions) {
+            addperm(inviter, invitee, guid, p.permName, p.scope);
         }
     }
 
@@ -213,6 +219,9 @@ namespace secrataContainer {
             // Erase the entry for the member
             guidIdx.erase(matched_guid_itr);
         }
+
+        // Remove all the permissions for the removed user
+        removeAllUserPermissions(guid, member);
     }
 
     // -------- Messages --------
@@ -607,7 +616,7 @@ namespace secrataContainer {
             matchingPerm++ ;
         }
 
-        if ( matchingPerm == permUserIdx.end() ) {
+        if ( matchingPerm == permUserIdx.end() || matchingPerm->permissionType != permType || matchingPerm->user != target || matchingPerm->scope != scope) {
             // Add the user's permission
             permissions.emplace(user, [&](auto& p){
                 p.id = permissions.available_primary_key();
@@ -615,9 +624,10 @@ namespace secrataContainer {
                 p.user = target;
                 p.scope = scope;
             });
+            print("Set Permissions\n");
+        } else {
+            print("Permission already set");
         }
-
-        print("Set Permissions\n");
     }
 
     void container::removeperm(account_name user, account_name target, uint64_t guid, string permName, string scope) {
@@ -756,6 +766,17 @@ namespace secrataContainer {
         auto workspaceInfo = workspaces.begin();
 
         return ( workspaceInfo != workspaces.end() && workspaceInfo->owner == user) ;
+    }
+
+    void container::removeAllUserPermissions(uint64_t guid, account_name user){
+        permission_index permissions(_self, guid) ;
+
+        auto nameIdx = permissions.template get_index<N(byuser)>();
+        auto matchingPerm = nameIdx.lower_bound(user);
+
+        while ( matchingPerm != nameIdx.end() && matchingPerm->user == user) {
+            matchingPerm = nameIdx.erase(matchingPerm);
+        }
     }
 }
 

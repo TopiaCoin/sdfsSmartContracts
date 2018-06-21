@@ -38,6 +38,7 @@ namespace secrataContainer {
             workspace.name = workspaceName;
             workspace.description = workspaceDescription;
             workspace.owner = owner;
+            workspace.newowner = 0;
         });
 
         // Add the workspace creator as a member
@@ -74,6 +75,64 @@ namespace secrataContainer {
         });
     }
 
+    void container::offerowner(uint64_t guid,
+                  account_name newowner){
+
+        eosio_assert(workspaceExists(guid), "The specified workspace does not exist");
+
+        eosio_assert(is_account(newowner), "The specified account does not exist");
+
+        eosio_assert(userIsMemberOfWorkspace(newowner, guid, true),
+                     "Ownership cannot be given to a user who is not an active member");
+
+        workspace_index workspaces(_self, guid);
+
+        auto workspaceItr = workspaces.begin();
+
+        // Only the workspace owner can transfer ownership
+        require_auth(workspaceItr->owner);
+
+        workspaces.modify(workspaceItr, workspaceItr->owner, [&](auto &w) {
+            w.newowner = newowner;
+        });
+    }
+
+    void container::acceptowner(uint64_t guid){
+
+        eosio_assert(workspaceExists(guid), "The specified workspace does not exist");
+
+        workspace_index workspaces(_self, guid);
+
+        auto workspaceItr = workspaces.begin();
+
+        // Only the specified new owner can accept ownership
+        require_auth(workspaceItr->newowner);
+
+        eosio_assert(userIsMemberOfWorkspace(workspaceItr->newowner, guid, true),
+                     "You are not a member of the workspace");
+
+        workspaces.modify(workspaceItr, workspaceItr->newowner, [&](auto &w) {
+            w.owner = workspaceItr->newowner;
+            w.newowner = 0;
+        });
+    }
+
+    void container::rescindowner(uint64_t guid) {
+
+        eosio_assert(workspaceExists(guid), "The specified workspace does not exist");
+
+        workspace_index workspaces(_self, guid);
+
+        auto workspaceItr = workspaces.begin();
+
+        // Only the specified new owner can accept ownership
+        require_auth(workspaceItr->owner);
+
+        workspaces.modify(workspaceItr, workspaceItr->owner, [&](auto &w) {
+            w.newowner = 0;
+        });
+    }
+
     // -------- Membership --------
 
     void container::invite(account_name inviter,
@@ -83,6 +142,8 @@ namespace secrataContainer {
                            std::vector <userPermission> permissions) {
 
         require_auth(inviter);
+
+        eosio_assert(is_account(invitee), "The specified account does not exist");
 
         eosio_assert(workspaceExists(guid),
                      "The specified workspace does not exist");
@@ -852,5 +913,5 @@ namespace secrataContainer {
 EOSIO_ABI( secrataContainer::container, (create)(update)(invite)(accept)(decline)
         (remove)(addmessage)(ackmessage)(addfile)(removefile)
         (ackfile)(addtag)(removetag)(lockfile)(unlockfile)(addperm)
-(removeperm)(addperms)(removeperms))
+(removeperm)(addperms)(removeperms)(offerowner)(acceptowner)(rescindowner))
 

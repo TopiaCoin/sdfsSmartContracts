@@ -160,6 +160,25 @@
                 {"name": "guid", "type": "uint64"},
                 {"name": "permissions", "type": "userPermission[]"}
             ]
+        },{
+            "name": "offerOwnerAction",
+            "base": "",
+            "fields": [
+                {"name": "guid", "type": "uint64"},
+                {"name": "newowner", "type": "account_name"}
+            ]
+        },{
+            "name": "acceptOwnerAction",
+            "base": "",
+            "fields": [
+                {"name": "guid", "type": "uint64"}
+            ]
+        },{
+            "name": "rescindOwnerAction",
+            "base": "",
+            "fields": [
+                {"name": "guid", "type": "uint64"}
+            ]
         },
 
         {
@@ -178,7 +197,8 @@
 				{"name": "id", "type": "uint64"},
 				{"name": "name", "type": "string"},
 				{"name": "description", "type": "string"},
-				{"name": "owner", "type": "account_name"}
+				{"name": "owner", "type": "account_name"},
+				{"name": "newowner", "type": "account_name"}
 			]
 		},
 		{
@@ -270,6 +290,18 @@
 		{
 			"name": "update",
 			"type": "updateAction"
+		},
+		{
+			"name": "offerowner",
+			"type": "offerOwnerAction"
+		},
+		{
+			"name": "acceptowner",
+			"type": "acceptOwnerAction"
+		},
+		{
+			"name": "rescindowner",
+			"type": "rescindOwnerAction"
 		},
 		{
 			"name": "invite",

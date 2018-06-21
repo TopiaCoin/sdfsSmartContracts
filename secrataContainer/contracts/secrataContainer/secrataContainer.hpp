@@ -35,7 +35,14 @@ namespace secrataContainer {
                     uint64_t guid,
                     string workspaceDescription);
 
-        // -------- Membership --------
+        void offerowner(uint64_t guid,
+                      account_name newowner);
+
+        void acceptowner(uint64_t guid);
+
+        void rescindowner(uint64_t guid) ;
+
+                // -------- Membership --------
 
         void invite(account_name inviter,
                     account_name invitee,
@@ -171,10 +178,11 @@ namespace secrataContainer {
             string name;
             string description;
             account_name owner;
+            account_name newowner;
 
             uint64_t primary_key() const { return id; }
 
-            EOSLIB_SERIALIZE(workspace, (id)(name)(description)(owner)
+            EOSLIB_SERIALIZE(workspace, (id)(name)(description)(owner)(newowner)
             )
         };
 

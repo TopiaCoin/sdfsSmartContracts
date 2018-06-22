@@ -76,7 +76,7 @@ namespace secrataContainer {
     }
 
     void container::offerowner(uint64_t guid,
-                  account_name newowner){
+                               account_name newowner) {
 
         eosio_assert(workspaceExists(guid), "The specified workspace does not exist");
 
@@ -96,7 +96,7 @@ namespace secrataContainer {
         });
     }
 
-    void container::acceptowner(uint64_t guid){
+    void container::acceptowner(uint64_t guid) {
 
         eosio_assert(workspaceExists(guid), "The specified workspace does not exist");
 
@@ -136,61 +136,68 @@ namespace secrataContainer {
     void container::destroy(uint64_t guid) {
 
         // Only the owner can destroy the workspace.
-        require_auth(getOwner(guid)) ;
+        require_auth(getOwner(guid));
 
         // Remove all message receipts from the workspace
         messageReceipt_index messageReceipts(_self, guid);
         auto messageReceiptIdx = messageReceipts.begin();
-        while ( messageReceiptIdx != messageReceipts.end() ) {
+        while (messageReceiptIdx != messageReceipts.end()) {
             messageReceiptIdx = messageReceipts.erase(messageReceiptIdx);
         }
 
         // Remove all the messages from the workspace
         message_index messages(_self, guid);
         auto messageIdx = messages.begin();
-        while ( messageIdx != messages.end()){
+        while (messageIdx != messages.end()) {
             messageIdx = messages.erase(messageIdx);
         }
 
         // Remove all file tags from the workspace
         fileTag_index fileTags(_self, guid);
         auto fileTagIdx = fileTags.begin();
-        while ( fileTagIdx != fileTags.end()){
+        while (fileTagIdx != fileTags.end()) {
             fileTagIdx = fileTags.erase(fileTagIdx);
         }
 
         // Remove all file receipts from the the workspace
         fileReceipt_index fileReceipts(_self, guid);
         auto fileReceiptIdx = fileReceipts.begin();
-        while(fileReceiptIdx != fileReceipts.end()) {
+        while (fileReceiptIdx != fileReceipts.end()) {
             fileReceiptIdx = fileReceipts.erase(fileReceiptIdx);
         }
 
         // Remove all the files from the workspace
         file_index files(_self, guid);
         auto fileIdx = files.begin();
-        while ( fileIdx != files.end() ){
+        while (fileIdx != files.end()) {
             fileIdx = files.erase(fileIdx);
         }
 
         // Remove all the members from the workspace
         membership_index membership(_self, guid);
         auto memberIdx = membership.begin();
-        while ( memberIdx != membership.end()){
+        while (memberIdx != membership.end()) {
             memberIdx = membership.erase(memberIdx);
         }
 
         // Remove all permissions from the workspace
         permission_index permissions(_self, guid);
         auto permissionIdx = permissions.begin();
-        while ( permissionIdx != permissions.end()){
+        while (permissionIdx != permissions.end()) {
             permissionIdx = permissions.erase(permissionIdx);
+        }
+
+        // Remove the locks
+        lock_index locks(_self, guid);
+        auto lockIdx = locks.begin();
+        while (lockIdx != locks.end()) {
+            lockIdx = locks.erase(lockIdx);
         }
 
         // Remove the workspace Info
         workspace_index workspaces(_self, guid);
         auto workspaceIdx = workspaces.begin();
-        while ( workspaceIdx != workspaces.end() ) {
+        while (workspaceIdx != workspaces.end()) {
             workspaceIdx = workspaces.erase(workspaceIdx);
         }
     }
@@ -205,7 +212,8 @@ namespace secrataContainer {
 
         require_auth(inviter);
 
-        eosio_assert(is_account(invitee), "The specified account does not exist");
+        eosio_assert(is_account(invitee),
+                     "The specified account does not exist");
 
         eosio_assert(workspaceExists(guid),
                      "The specified workspace does not exist");
@@ -237,7 +245,7 @@ namespace secrataContainer {
             });
         } else {
             // The invitee is either already a member of the workspace, or has already been invited.
-            return ;
+            return;
         }
 
         // Clear the invitees existing permissions and assign the given permissions.
@@ -268,8 +276,9 @@ namespace secrataContainer {
             matched_guid_itr++;
         }
 
-        eosio_assert(matched_guid_itr != guidIdx.end() && matched_guid_itr->user == invitee && matched_guid_itr->status == 0,
-                     "No Pending Invite found for the specified user and workspace");
+        eosio_assert(
+                matched_guid_itr != guidIdx.end() && matched_guid_itr->user == invitee && matched_guid_itr->status == 0,
+                "No Pending Invite found for the specified user and workspace");
 
         // Update the existing record, to mark the user as active.
         guidIdx.modify(matched_guid_itr, invitee, [&](auto &m) {
@@ -323,6 +332,9 @@ namespace secrataContainer {
         eosio_assert(member != getOwner(guid),
                      "The workspace owner cannot be removed from the workspace");
 
+        eosio_assert(!entityIsLocked(guid, member),
+                     "Member is locked and cannot be removed.");
+
         membership_index memberships(_self, guid);
 
         // Get any existing Membership record for the invitee.
@@ -340,6 +352,72 @@ namespace secrataContainer {
 
         // Remove all the permissions for the removed user
         removeAllUserPermissions(guid, member);
+
+        // Remove all the locks held by the removed user.
+        removeAllLocks(guid, member);
+    }
+
+    void container::lockmember(account_name locker,
+                               account_name lockee,
+                               uint64_t guid) {
+
+        require_auth(locker);
+
+        eosio_assert(workspaceExists(guid),
+                     "The specified workspace does not exist");
+
+        eosio_assert(userIsMemberOfWorkspace(locker, guid, true),
+                     "You are not a member of the workspace");
+
+        eosio_assert(userHasPermission(guid, locker, N(lockuser), lockee),
+                     "User does not have permission to remove members from the workspace");
+
+        lock_index locks(_self, guid);
+
+        auto lockIdx = locks.template get_index<N(byguid)>();
+        auto matchingLock = lockIdx.lower_bound(lockee);
+
+        if (matchingLock != lockIdx.end() && matchingLock->guid == lockee) {
+            // There is an existing lock.  Does the user own it?
+            eosio_assert(matchingLock->lockOwner == locker,
+                         "This member is already locked");
+        }
+
+        locks.emplace(locker, [&](auto &l) {
+            l.id = locks.available_primary_key();
+            l.guid = lockee;
+            l.lockOwner = locker;
+        });
+
+    }
+
+    void container::unlockmember(account_name locker,
+                                 account_name lockee,
+                                 uint64_t guid) {
+
+        require_auth(locker);
+
+        eosio_assert(workspaceExists(guid),
+                     "The specified workspace does not exist");
+
+        eosio_assert(userIsMemberOfWorkspace(locker, guid, true),
+                     "You are not a member of the workspace");
+
+        eosio_assert((locker == lockee) || userHasPermission(guid, locker, N(lockuser), lockee),
+                     "User does not have permission to remove members from the workspace");
+
+        lock_index locks(_self, guid);
+
+        auto lockIdx = locks.template get_index<N(byguid)>();
+        auto matchingLock = lockIdx.lower_bound(lockee);
+
+        if (matchingLock != lockIdx.end() && matchingLock->guid == lockee) {
+            // There is an existing lock.  Does the user own it?
+            eosio_assert((locker == lockee) || matchingLock->lockOwner == locker,
+                         "The user does not hold the lock on this member.");
+        }
+
+        lockIdx.erase(matchingLock);
     }
 
     // -------- Messages --------
@@ -440,10 +518,16 @@ namespace secrataContainer {
         eosio_assert(userIsMemberOfWorkspace(uploader, guid, true),
                      "You are not a member of the workspace");
 
+        eosio_assert(userHasPermission(guid, uploader, N(addfile)),
+                     "User does not have permission to add files to the workspace");
+
         eosio_assert(versionID != 0, "Cannot specify a version ID of 0");
 
         eosio_assert(!fileVersionExistsInWorkspace(fileID, versionID, guid),
                      "A file with this File ID and Version ID already exists in this workspace");
+
+        eosio_assert(!entityIsLocked(guid, fileID),
+                     "The file is locked.");
 
         eosio_assert(parentID == 0 || fileExistsInWorkspace(parentID, guid),
                      "The specified parent file does not exist in this workspace");
@@ -452,9 +536,6 @@ namespace secrataContainer {
             eosio_assert(fileVersionExistsInWorkspace(fileID, ancestor, guid),
                          "The specified ancestor version does not exist in this workspace");
         }
-
-        eosio_assert(userHasPermission(guid, uploader, N(addfile)),
-                     "User does not have permission to add files to the workspace");
 
         file_index files(_self, guid);
 
@@ -484,27 +565,32 @@ namespace secrataContainer {
         eosio_assert(userIsMemberOfWorkspace(remover, guid, true),
                      "You are not a member of the workspace");
 
+        eosio_assert(userHasPermission(guid, remover, N(removefile)),
+                     "User does not have permission to remove files from the workspace");
+
         eosio_assert(fileExistsInWorkspace(fileID, guid), "The specified file does not exist in this workspace");
 
         eosio_assert(versionID == 0 || fileVersionExistsInWorkspace(fileID, versionID, guid),
                      "The specified file version does not exist in this workspace");
 
-        eosio_assert(userHasPermission(guid, remover, N(removefile)),
-                     "User does not have permission to remove files from the workspace");
+        eosio_assert(!entityIsLocked(guid, fileID),
+                     "The file is locked.");
 
         file_index files(_self, guid);
 
         auto fileIDIdx = files.template get_index<N(byfileid)>();
         auto matchingFile = fileIDIdx.lower_bound(fileID);
 
-        if (versionID != 0) {
-            // A Version ID was specified, so advance to that specific version
-            while (matchingFile != fileIDIdx.end() && matchingFile->versionID != versionID) {
-                matchingFile++;
+        // Verify that the versions that we will be deleting (either all or a specific one) are not locked.
+        while (matchingFile != fileIDIdx.end() && matchingFile->fileID == fileID) {
+            if (versionID == 0 || matchingFile->versionID == versionID) {
+                eosio_assert(!entityIsLocked(guid, versionID), "A version of this file is locked.");
             }
+            matchingFile++;
         }
 
         // Run through every entry for this file deleting the appropriate version(s).
+        matchingFile = fileIDIdx.lower_bound(fileID);
         while (matchingFile != fileIDIdx.end() && matchingFile->fileID == fileID) {
             if (versionID == 0 || matchingFile->versionID == versionID) {
                 matchingFile = fileIDIdx.erase(matchingFile);
@@ -569,18 +655,62 @@ namespace secrataContainer {
         eosio_assert(userIsMemberOfWorkspace(user, guid, true),
                      "You are not a member of the workspace");
 
-        eosio_assert(fileExistsInWorkspace(fileID, guid), "The specified file does not exist in this workspace");
+        eosio_assert(fileExistsInWorkspace(fileID, guid),
+                     "The specified file does not exist in this workspace");
 
         eosio_assert(userHasPermission(guid, user, N(lockfile)),
                      "User does not have permission to lock files in the workspace");
 
-        file_index files(_self, guid);
+        lock_index locks(_self, guid);
 
-        auto fileIDIdx = files.template get_index<N(byfileid)>();
-        auto matchingFile = fileIDIdx.lower_bound(fileID);
+        auto lockIdx = locks.template get_index<N(byguid)>();
+        auto matchingLock = lockIdx.lower_bound(fileID);
 
-        fileIDIdx.modify(matchingFile, user, [&](auto &f) {
-            f.lockOwner = user;
+        if (matchingLock != lockIdx.end() && matchingLock->guid == fileID) {
+            // There is an existing lock.  Does the user own it?
+            eosio_assert(matchingLock->lockOwner == user, "This file is already locked");
+        }
+
+        locks.emplace(user, [&](auto &l) {
+            l.id = locks.available_primary_key();
+            l.guid = fileID;
+            l.lockOwner = user;
+        });
+    }
+
+    void container::lockver(account_name user,
+                            uint64_t guid,
+                            uint128_t fileID,
+                            uint128_t versionID) {
+
+        require_auth(user);
+
+        eosio_assert(workspaceExists(guid),
+                     "The specified workspace does not exist");
+
+        eosio_assert(userIsMemberOfWorkspace(user, guid, true),
+                     "You are not a member of the workspace");
+
+        eosio_assert(fileVersionExistsInWorkspace(fileID, versionID, guid),
+                     "The specified file version does not exist in this workspace");
+
+        eosio_assert(userHasPermission(guid, user, N(lockfile)),
+                     "User does not have permission to lock files in the workspace");
+
+        lock_index locks(_self, guid);
+
+        auto lockIdx = locks.template get_index<N(byguid)>();
+        auto matchingLock = lockIdx.lower_bound(versionID);
+
+        if (matchingLock != lockIdx.end() && matchingLock->guid == versionID) {
+            // There is an existing lock.  Does the user own it?
+            eosio_assert(matchingLock->lockOwner == user, "This file version is already locked");
+        }
+
+        locks.emplace(user, [&](auto &l) {
+            l.id = locks.available_primary_key();
+            l.guid = versionID;
+            l.lockOwner = user;
         });
     }
 
@@ -596,20 +726,50 @@ namespace secrataContainer {
         eosio_assert(userIsMemberOfWorkspace(user, guid, true),
                      "You are not a member of the workspace");
 
-        eosio_assert(fileExistsInWorkspace(fileID, guid), "The specified file does not exist in this workspace");
+        eosio_assert(fileExistsInWorkspace(fileID, guid),
+                     "The specified file does not exist in this workspace");
 
-        file_index files(_self, guid);
+        lock_index locks(_self, guid);
 
-        auto fileIDIdx = files.template get_index<N(byfileid)>();
-        auto matchingFile = fileIDIdx.lower_bound(fileID);
+        auto lockIdx = locks.template get_index<N(byguid)>();
+        auto matchingLock = lockIdx.lower_bound(fileID);
 
-        eosio_assert(matchingFile->lockOwner == 0 || matchingFile->lockOwner == user,
-                     "You do not hold the lock on this file");
+        if (matchingLock != lockIdx.end() && matchingLock->guid == fileID) {
+            // There is an existing lock.  Does the user own it?
+            eosio_assert(matchingLock->lockOwner == user, "The user does not hold the lock on this file.");
+        }
 
-        fileIDIdx.modify(matchingFile, user, [&](auto &f) {
-            f.lockOwner = 0;
-        });
+        lockIdx.erase(matchingLock);
+    }
 
+    void container::unlockver(account_name user,
+                              uint64_t guid,
+                              uint128_t fileID,
+                              uint128_t versionID) {
+
+        print(" ");
+        require_auth(user);
+
+        eosio_assert(workspaceExists(guid),
+                     "The specified workspace does not exist");
+
+        eosio_assert(userIsMemberOfWorkspace(user, guid, true),
+                     "You are not a member of the workspace");
+
+        eosio_assert(fileVersionExistsInWorkspace(fileID, versionID, guid),
+                     "The specified file version does not exist in this workspace");
+
+        lock_index locks(_self, guid);
+
+        auto lockIdx = locks.template get_index<N(byguid)>();
+        auto matchingLock = lockIdx.lower_bound(versionID);
+
+        if (matchingLock != lockIdx.end() && matchingLock->guid == versionID) {
+            // There is an existing lock.  Does the user own it?
+            eosio_assert(matchingLock->lockOwner == user, "The user does not hold the lock on this file version.");
+        }
+
+        lockIdx.erase(matchingLock);
     }
 
     void container::addtag(account_name user,
@@ -722,7 +882,7 @@ namespace secrataContainer {
         eosio_assert(userHasPermission(guid, user, N(updateperm), target),
                      "User does not have permission to modify user permissions in the workspace");
 
-        if ( internalAddPerm(user, target, guid, permName, scope) ) {
+        if (internalAddPerm(user, target, guid, permName, scope)) {
             print("Added Permissions\n");
         }
     }
@@ -744,16 +904,16 @@ namespace secrataContainer {
         eosio_assert(userHasPermission(guid, user, N(updateperm), target),
                      "User does not have permission to modify user permissions in the workspace");
 
-        if (internalRemovePerm(user, target, guid, permName, scope) ) {
+        if (internalRemovePerm(user, target, guid, permName, scope)) {
             print("Removed Permission");
         }
     }
 
 
     void container::addperms(account_name user,
-                            account_name target,
-                            uint64_t guid,
-                            std::vector <userPermission> permissions) {
+                             account_name target,
+                             uint64_t guid,
+                             std::vector <userPermission> permissions) {
 
         require_auth(user);
 
@@ -763,8 +923,14 @@ namespace secrataContainer {
         eosio_assert(userIsMemberOfWorkspace(user, guid, true),
                      "You are not a member of the workspace");
 
+        eosio_assert(userIsMemberOfWorkspace(target, guid, false),
+                     "Target user is not a member of the workspace");
+
+        eosio_assert(is_account(target),
+                     "The target user account does not exist");
+
         eosio_assert(userHasPermission(guid, user, N(updateperm), target),
-                     "User does not have permission to modify user permissions in the workspace");
+                     "You do not have permission to modify user permissions in the workspace");
 
         for (userPermission p : permissions) {
             internalAddPerm(user, target, guid, p.permName, p.scope);
@@ -798,7 +964,7 @@ namespace secrataContainer {
                                        uint64_t guid,
                                        string permName,
                                        string scope) {
-        boolean added = false ;
+        boolean added = false;
 
         uint64_t permType = eosio::string_to_name(permName.c_str());
 
@@ -824,7 +990,7 @@ namespace secrataContainer {
                 p.user = target;
                 p.scope = scope;
             });
-            added = true ;
+            added = true;
         }
 
         return added;
@@ -836,7 +1002,7 @@ namespace secrataContainer {
                                           uint64_t guid,
                                           string permName,
                                           string scope) {
-        boolean removed = false ;
+        boolean removed = false;
 
         uint64_t permType = eosio::string_to_name(permName.c_str());
 
@@ -853,9 +1019,9 @@ namespace secrataContainer {
             matchingPerm++;
         }
 
-        if (matchingPerm != permUserIdx.end() ) {
+        if (matchingPerm != permUserIdx.end()) {
             permUserIdx.erase(matchingPerm);
-            removed = true ;
+            removed = true;
         }
 
         return removed;
@@ -917,12 +1083,12 @@ namespace secrataContainer {
         return found;
     }
 
-    account_name container::getOwner(uint64_t guid){
+    account_name container::getOwner(uint64_t guid) {
         workspace_index workspaces(_self, guid);
 
         auto workspaceItr = workspaces.begin();
 
-        return workspaceItr->owner;
+        return (workspaceItr != workspaces.end() ? workspaceItr->owner : 0);
     }
 
     boolean container::userHasPermission(uint64_t guid, account_name user, uint64_t permType) {
@@ -951,7 +1117,7 @@ namespace secrataContainer {
         auto permUserIdx = permissions.template get_index<N(bypermuser)>();
         auto matchingPerm = permUserIdx.lower_bound(key);
 
-        boolean hasPerm = userOwnsWorkspace(guid, user) ;
+        boolean hasPerm = userOwnsWorkspace(guid, user);
 
         while (!hasPerm && matchingPerm != permUserIdx.end() && matchingPerm->user == user &&
                matchingPerm->permissionType == permType) {
@@ -980,11 +1146,41 @@ namespace secrataContainer {
             matchingPerm = nameIdx.erase(matchingPerm);
         }
     }
+
+    void container::removeAllLocks(uint64_t guid, account_name user){
+        lock_index locks(_self, guid);
+
+        auto lockIdx = locks.template get_index<N(bylockowner)>();
+        auto matchingLock = lockIdx.lower_bound(user);
+
+        while ( matchingLock != lockIdx.end() ) {
+            matchingLock = locks.erase(matchingLock);
+        }
+    }
+
+    boolean container::entityIsLocked(uint64_t wsGuid, uint128_t entityGuid) {
+        lock_index locks(_self, wsGuid);
+
+        auto lockIdx = locks.template get_index<N(byguid)>();
+        auto matchingLock = lockIdx.lower_bound(entityGuid);
+
+        return (matchingLock != lockIdx.end() && matchingLock->guid == entityGuid);
+    }
+
+    boolean container::entityIsLockedByUser(uint64_t wsGuid, uint128_t entityGuid, account_name user) {
+        lock_index locks(_self, wsGuid);
+
+        auto lockIdx = locks.template get_index<N(byguid)>();
+        auto matchingLock = lockIdx.lower_bound(entityGuid);
+
+        return (matchingLock != lockIdx.end() && matchingLock->guid == entityGuid && matchingLock->lockOwner == user);
+    }
 }
 
 
 EOSIO_ABI( secrataContainer::container, (create)(update)(invite)(accept)(decline)
-        (remove)(addmessage)(ackmessage)(addfile)(removefile)
-        (ackfile)(addtag)(removetag)(lockfile)(unlockfile)(addperm)
-(removeperm)(addperms)(removeperms)(offerowner)(acceptowner)(rescindowner)(destroy))
+        (remove)(lockmember)(unlockmember)(addmessage)(ackmessage)(addfile)(removefile)
+        (ackfile)(addtag)(removetag)(lockfile)(unlockfile)(lockver)(unlockver)(addperm)
+        (removeperm)(addperms)(removeperms)(offerowner)(acceptowner)(rescindowner)
+(destroy))
 

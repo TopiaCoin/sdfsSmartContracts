@@ -36,15 +36,15 @@ namespace secrataContainer {
                     string workspaceDescription);
 
         void offerowner(uint64_t guid,
-                      account_name newowner);
+                        account_name newowner);
 
         void acceptowner(uint64_t guid);
 
-        void rescindowner(uint64_t guid) ;
+        void rescindowner(uint64_t guid);
 
         void destroy(uint64_t guid);
 
-                // -------- Membership --------
+        // -------- Membership --------
 
         void invite(account_name inviter,
                     account_name invitee,
@@ -61,6 +61,14 @@ namespace secrataContainer {
         void remove(account_name remover,
                     account_name member,
                     uint64_t guid);
+
+        void lockmember(account_name locker,
+                        account_name lockee,
+                        uint64_t guid);
+
+        void unlockmember(account_name locker,
+                          account_name lockee,
+                          uint64_t guid);
 
         // -------- Messages --------
 
@@ -97,9 +105,19 @@ namespace secrataContainer {
                       uint64_t guid,
                       uint128_t fileID);
 
+        void lockver(account_name user,
+                     uint64_t guid,
+                     uint128_t fileID,
+                     uint128_t versionID);
+
         void unlockfile(account_name user,
                         uint64_t guid,
                         uint128_t fileID);
+
+        void unlockver(account_name user,
+                       uint64_t guid,
+                       uint128_t fileID,
+                       uint128_t versionID);
 
         void addtag(account_name user,
                     uint64_t guid,
@@ -174,6 +192,12 @@ namespace secrataContainer {
                                    string scope);
 
         void removeAllUserPermissions(uint64_t guid, account_name user);
+
+        void removeAllLocks(uint64_t guid, account_name user);
+
+        boolean entityIsLocked(uint64_t wsGuid, uint128_t entityGuid);
+
+        boolean entityIsLockedByUser(uint64_t wsGuid, uint128_t entityGuid, account_name user);
 
 
         //@abi table
@@ -347,6 +371,27 @@ namespace secrataContainer {
                 indexed_by < N(byuser), const_mem_fun < permission, account_name, &permission::get_user> >,
         indexed_by<N(bypermuser), const_mem_fun < permission, uint128_t, &permission::get_permType_user> > >
         permission_index;
+
+        //@abi table
+        struct lock {
+            uint64_t id;
+            uint128_t guid;
+            account_name lockOwner;
+
+            uint64_t primary_key() const { return id; }
+
+            uint128_t get_guid() const { return guid; }
+
+            account_name get_lockOwner() const { return lockOwner; }
+
+            EOSLIB_SERIALIZE(lock, (id)(guid)(lockOwner)
+            )
+        };
+
+        typedef eosio::multi_index<N(locks), lock,
+                indexed_by < N(byguid), const_mem_fun < lock, uint128_t, &lock::get_guid> >,
+        indexed_by<N(bylockowner), const_mem_fun < lock, account_name, &lock::get_lockOwner> > >
+        lock_index;
     };
 
 }

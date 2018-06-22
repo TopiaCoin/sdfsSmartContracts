@@ -141,6 +141,24 @@
                 {"name": "guid", "type": "uint64"},
                 {"name": "fileID", "type": "uint128"}
             ]
+        }, {
+            "name": "lockVersionAction",
+            "base": "",
+            "fields": [
+                {"name": "user", "type": "account_name"},
+                {"name": "guid", "type": "uint64"},
+                {"name": "fileID", "type": "uint128"},
+                {"name": "versionID", "type": "uint128"}
+            ]
+        }, {
+            "name": "unlockVersionAction",
+            "base": "",
+            "fields": [
+                {"name": "user", "type": "account_name"},
+                {"name": "guid", "type": "uint64"},
+                {"name": "fileID", "type": "uint128"},
+                {"name": "versionID", "type": "uint128"}
+            ]
         },{
             "name": "permissionAction",
             "base": "",
@@ -183,6 +201,14 @@
             "name": "destroyAction",
             "base": "",
             "fields": [
+                {"name": "guid", "type": "uint64"}
+            ]
+        },{
+            "name": "lockMemberAction",
+            "base": "",
+            "fields": [
+                {"name": "locker", "type": "account_name"},
+                {"name": "lockee", "type": "account_name"},
                 {"name": "guid", "type": "uint64"}
             ]
         },
@@ -286,6 +312,15 @@
                 {"name": "user", "type": "account_name"},
                 {"name": "scope", "type": "string"}
             ]
+        },
+        {
+            "name": "lockRow",
+            "base": "",
+            "fields": [
+                {"name": "id", "type": "uint64"},
+                {"name": "guid", "type": "uint128"},
+                {"name": "lockOwner", "type": "account_name"},
+            ]
         }
 	],
 	"actions": [{
@@ -329,6 +364,14 @@
 			"type": "removeAction"
 		},
 		{
+			"name": "lockmember",
+			"type": "lockMemberAction"
+		},
+		{
+			"name": "unlockmember",
+			"type": "lockMemberAction"
+		},
+		{
 		    "name": "addmessage",
 		    "type": "addMessageAction"
 		},
@@ -363,6 +406,14 @@
         {
             "name": "unlockfile",
             "type": "unlockFileAction"
+        },
+        {
+            "name": "lockver",
+            "type": "lockVersionAction"
+        },
+        {
+            "name": "unlockver",
+            "type": "unlockVersionAction"
         },
         {
             "name": "addperm",
@@ -464,6 +515,18 @@
             "uint128"
         ],
         "type": "permissionRow"
+    },{
+        "name": "locks",
+        "index_type": "i64",
+        "key_names": [
+            "guid",
+            "lockOwner"
+        ],
+        "key_types": [
+            "uint128",
+            "account_name"
+        ],
+        "type": "lockRow"
     }],
 	"ricardian_clauses": []
 }

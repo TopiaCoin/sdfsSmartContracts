@@ -85,12 +85,11 @@ namespace secrataContainer {
         eosio_assert(userIsMemberOfWorkspace(newowner, guid, true),
                      "Ownership cannot be given to a user who is not an active member");
 
-        workspace_index workspaces(_self, guid);
-
-        auto workspaceItr = workspaces.begin();
-
         // Only the workspace owner can transfer ownership
-        require_auth(workspaceItr->owner);
+        require_auth(getOwner(guid));
+
+        workspace_index workspaces(_self, guid);
+        auto workspaceItr = workspaces.begin();
 
         workspaces.modify(workspaceItr, workspaceItr->owner, [&](auto &w) {
             w.newowner = newowner;
@@ -115,22 +114,85 @@ namespace secrataContainer {
             w.owner = workspaceItr->newowner;
             w.newowner = 0;
         });
+
+        print("\n");
     }
 
     void container::rescindowner(uint64_t guid) {
 
         eosio_assert(workspaceExists(guid), "The specified workspace does not exist");
 
+        // Only the workspace owner can rescind ownership transfer
+        require_auth(getOwner(guid));
+
         workspace_index workspaces(_self, guid);
-
         auto workspaceItr = workspaces.begin();
-
-        // Only the specified new owner can accept ownership
-        require_auth(workspaceItr->owner);
 
         workspaces.modify(workspaceItr, workspaceItr->owner, [&](auto &w) {
             w.newowner = 0;
         });
+    }
+
+    void container::destroy(uint64_t guid) {
+
+        // Only the owner can destroy the workspace.
+        require_auth(getOwner(guid)) ;
+
+        // Remove all message receipts from the workspace
+        messageReceipt_index messageReceipts(_self, guid);
+        auto messageReceiptIdx = messageReceipts.begin();
+        while ( messageReceiptIdx != messageReceipts.end() ) {
+            messageReceiptIdx = messageReceipts.erase(messageReceiptIdx);
+        }
+
+        // Remove all the messages from the workspace
+        message_index messages(_self, guid);
+        auto messageIdx = messages.begin();
+        while ( messageIdx != messages.end()){
+            messageIdx = messages.erase(messageIdx);
+        }
+
+        // Remove all file tags from the workspace
+        fileTag_index fileTags(_self, guid);
+        auto fileTagIdx = fileTags.begin();
+        while ( fileTagIdx != fileTags.end()){
+            fileTagIdx = fileTags.erase(fileTagIdx);
+        }
+
+        // Remove all file receipts from the the workspace
+        fileReceipt_index fileReceipts(_self, guid);
+        auto fileReceiptIdx = fileReceipts.begin();
+        while(fileReceiptIdx != fileReceipts.end()) {
+            fileReceiptIdx = fileReceipts.erase(fileReceiptIdx);
+        }
+
+        // Remove all the files from the workspace
+        file_index files(_self, guid);
+        auto fileIdx = files.begin();
+        while ( fileIdx != files.end() ){
+            fileIdx = files.erase(fileIdx);
+        }
+
+        // Remove all the members from the workspace
+        membership_index membership(_self, guid);
+        auto memberIdx = membership.begin();
+        while ( memberIdx != membership.end()){
+            memberIdx = membership.erase(memberIdx);
+        }
+
+        // Remove all permissions from the workspace
+        permission_index permissions(_self, guid);
+        auto permissionIdx = permissions.begin();
+        while ( permissionIdx != permissions.end()){
+            permissionIdx = permissions.erase(permissionIdx);
+        }
+
+        // Remove the workspace Info
+        workspace_index workspaces(_self, guid);
+        auto workspaceIdx = workspaces.begin();
+        while ( workspaceIdx != workspaces.end() ) {
+            workspaceIdx = workspaces.erase(workspaceIdx);
+        }
     }
 
     // -------- Membership --------
@@ -257,6 +319,9 @@ namespace secrataContainer {
 
         eosio_assert(userHasPermission(guid, remover, N(remove), member),
                      "User does not have permission to remove members from the workspace");
+
+        eosio_assert(member != getOwner(guid),
+                     "The workspace owner cannot be removed from the workspace");
 
         membership_index memberships(_self, guid);
 
@@ -852,6 +917,14 @@ namespace secrataContainer {
         return found;
     }
 
+    account_name container::getOwner(uint64_t guid){
+        workspace_index workspaces(_self, guid);
+
+        auto workspaceItr = workspaces.begin();
+
+        return workspaceItr->owner;
+    }
+
     boolean container::userHasPermission(uint64_t guid, account_name user, uint64_t permType) {
         return userHasPermission(guid, user, permType, "");
     }
@@ -913,5 +986,5 @@ namespace secrataContainer {
 EOSIO_ABI( secrataContainer::container, (create)(update)(invite)(accept)(decline)
         (remove)(addmessage)(ackmessage)(addfile)(removefile)
         (ackfile)(addtag)(removetag)(lockfile)(unlockfile)(addperm)
-(removeperm)(addperms)(removeperms)(offerowner)(acceptowner)(rescindowner))
+(removeperm)(addperms)(removeperms)(offerowner)(acceptowner)(rescindowner)(destroy))
 

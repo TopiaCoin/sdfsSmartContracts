@@ -42,6 +42,8 @@ namespace secrataContainer {
 
         void rescindowner(uint64_t guid) ;
 
+        void destroy(uint64_t guid);
+
                 // -------- Membership --------
 
         void invite(account_name inviter,
@@ -146,6 +148,8 @@ namespace secrataContainer {
         boolean fileExistsInWorkspace(uint128_t fileID, uint64_t guid);
 
         boolean fileVersionExistsInWorkspace(uint128_t fileID, uint128_t versionID, uint64_t guid);
+
+        account_name getOwner(uint64_t guid);
 
         boolean userHasPermission(uint64_t guid, account_name user, uint64_t permType);
 

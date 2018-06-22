@@ -179,8 +179,13 @@
             "fields": [
                 {"name": "guid", "type": "uint64"}
             ]
+        },{
+            "name": "destroyAction",
+            "base": "",
+            "fields": [
+                {"name": "guid", "type": "uint64"}
+            ]
         },
-
         {
             "name": "userPermission",
             "base": "",
@@ -302,6 +307,10 @@
 		{
 			"name": "rescindowner",
 			"type": "rescindOwnerAction"
+		},
+		{
+			"name": "destroy",
+			"type": "destroyAction"
 		},
 		{
 			"name": "invite",

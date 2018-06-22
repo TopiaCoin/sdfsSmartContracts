@@ -449,7 +449,7 @@ namespace secrataContainer {
             m.mimeType = mimeType;
         });
 
-        print("Message Created\n");
+        // TODO - Should the author automatically acknowledge his own message?
     }
 
     void container::ackmessage(account_name user,
@@ -487,17 +487,12 @@ namespace secrataContainer {
 
         eosio_assert(matchMsgIdx == msgIdIdx.end(), "This user has already acknowledged this message");
 
-        if (matchMsgIdx == msgIdIdx.end()) {
-            receipts.emplace(user, [&](auto &r) {
-                r.id = receipts.available_primary_key();
-                r.msgID = msgID;
-                r.user = user;
-                r.timestamp = now();
-            });
-        } else {
-            // A receipt already exists for this user.
-            cout << ((const char *) "Message Already Acknowledged\n");
-        }
+        receipts.emplace(user, [&](auto &r) {
+            r.id = receipts.available_primary_key();
+            r.msgID = msgID;
+            r.user = user;
+            r.timestamp = now();
+        });
     }
 
     // -------- Files --------

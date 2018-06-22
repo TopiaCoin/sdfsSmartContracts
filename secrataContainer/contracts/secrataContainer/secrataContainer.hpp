@@ -25,64 +25,210 @@ namespace secrataContainer {
     public:
         container(account_name self) : contract(self) {}
 
+        /**
+         * Creates a new workspace with the specified GUID, name, and
+         * description.  The key is assigned to the user who creates the
+         * workspace.
+         *
+         * @param owner The user account to whom this workspace will belong.
+         * @param guid The unique identifier assigned to this workspace.
+         * @param workspaceName The name assigned to the this workspace.
+         * @param workspaceDescription The description assigned to this workspace.
+         * @param key The encrypted workspace key assigned to the creator of this workspace.
+         */
         void create(account_name owner,
                     uint64_t guid,
                     string workspaceName,
                     string workspaceDescription,
                     string key);
 
+        /**
+         * Updates the description of a workspace.  In order to update the
+         * workspace description, the user must either be the owner of the
+         * workspace, or have been granted the 'updatewks' permission.
+         *
+         * @param user The user who is changing the workspace description.
+         * @param guid The unique identifier of the workspace whose description is being changed.
+         * @param workspaceDescription The new description to be assigned to the workspace.
+         */
         void update(account_name user,
                     uint64_t guid,
                     string workspaceDescription);
 
+        /**
+         * Offer ownership of a workspace to another member.  The newowner
+         * must be an existing member of the workspace.  This method can only
+         * be invoked by the current owner of the workspace.
+         *
+         * @param guid The unique identifier of the workspace whose ownership is being offered.
+         * @param newowner The account name of the member who is being offered ownership of the workspace.
+         */
         void offerowner(uint64_t guid,
                         account_name newowner);
 
+        /**
+         * Accept the offer of ownership for a workspace.  This method can
+         * only be invoked by the user who has been offered ownership.  Once
+         * invoked, the user becomes the new owner of the workspace.
+         *
+         * @param guid  The unique identifier of the workspace whose ownership is being accepted.
+         */
         void acceptowner(uint64_t guid);
 
+        /**
+         * Rescind the offer of ownership for a workspace.  This method can
+         * only be invoked by the user who offered ownership.  Once invoked,
+         * the user who was offered ownership can no longer accept ownership.
+         *
+         * @param guid The unique identifier of the workspace whose ownership offer is being rescinded.
+         */
         void rescindowner(uint64_t guid);
 
+        /**
+         * Destorys a workspace and all of its content.  All members are removed
+         * from the workspace.  All files, tags, and file receipts are removed.
+         * All messages and message receipts are removed.  All locks and permissions
+         * are removed.
+         *
+         * @param guid The unique identifier of the workspace that is being destroyed.
+         */
         void destroy(uint64_t guid);
 
         // -------- Membership --------
 
+        /**
+         * Invites a new user to a workspace.  The inviter muse be an active
+         * member of the workspace.  The invitee must be a valid, registered
+         * account on the blockchain.  The key is the workspace key encrypted
+         * for the invited user.  The permissions contain the initial set of
+         * permissions that will assigned to the new member.  If no permissions
+         * are specified, the new member will only be able to see the content
+         * in the workspace.
+         *
+         * @param inviter The account name of the user who is inviting the new member.
+         * @param invitee The account name of the user who is being invited.
+         * @param guid The unique identifier of the workspace to which the new member is being invited.
+         * @param key The workspace key encrypted for the new member.
+         * @param permissions The initial set of permissions to assign to the new member.
+         */
         void invite(account_name inviter,
                     account_name invitee,
                     uint64_t guid,
                     string key,
                     std::vector <userPermission> permissions);
 
+        /**
+         * Accept an invitation to a workspace.
+         *
+         * @param invitee The account name of the user who is accepting the invitation.
+         * @param guid The unique identifier of the workspace whose invite is being accepted.
+         */
         void accept(account_name invitee,
                     uint64_t guid);
 
+        /**
+         * Declines an invitation to a workspace.
+         *
+         * @param invitee The account name of the user who is declining the invitation.
+         * @param guid The unique identifier of the workspace whose invite is being declined.
+         */
         void decline(account_name invitee,
                      uint64_t guid);
 
+        /**
+         * Removes a member from a workspace.  The remover must be an active
+         * member of the workspace and have been granted permission to remove
+         * other users.  Special dispensation is made for the workspace owner,
+         * who can always remove users from a workspace, and the case where a
+         * user is removing themselves.
+         *
+         * @param remover The account name of the user is performing the removal.
+         * @param member The account name of the user who is being removed.
+         * @param guid The unique identifier of the workspace from which the user is being removed.
+         */
         void remove(account_name remover,
                     account_name member,
                     uint64_t guid);
 
+        /**
+         * Locks a members record for a workspace.  This prevents the user
+         * from being removed from the workspace.  The locker must be an active
+         * member of the workspace and have the `lockuser` permission, or be
+         * the owner of the workspace.
+         *
+         * @param locker The account name of the user who is locking the member.
+         * @param lockee The account name of the member who is being locked.
+         * @param guid The unique identifier of the workspace in which the member is being locked.
+         */
         void lockmember(account_name locker,
                         account_name lockee,
                         uint64_t guid);
 
+        /**
+         * Unlocks a members record for a workspace.  Once unlocked, the user
+         * is able to leave the workspace normally.  The unlocker must be an
+         * active member of the workspace and have the 'lockuser' permission,
+         * be the owner of the workspace, or be attempting to unlock their own
+         * member record.
+         *
+         * @param locker The account name of the user who is unlocking the member.
+         * @param lockee The account name of the member who is being unlocked.
+         * @param guid The unique identifier of the workspace in which the member is being unlocked.
+         */
         void unlockmember(account_name locker,
                           account_name lockee,
                           uint64_t guid);
 
         // -------- Messages --------
 
+        /**
+         * Adds a message to a workspace.  The author must be an active member
+         * of the workspace and have been granted the 'addmessage' permission.
+         * A unique message ID will be assigned to the message.
+         *
+         * @param author The account name of the user who is adding the message.
+         * @param guid The unique identifier of the workspace to which the message is being added.
+         * @param message The message that is being added to the worksapce.
+         * @param mimeType The MIME type of the message (e.g. text/plain).
+         */
         void addmessage(account_name author,
                         uint64_t guid,
                         string message,
                         string mimeType);
 
+        /**
+         * Acknowledges a message in the a workspace.  The user must be an active
+         * member of the workspace.
+         *
+         * @param user The account name of the user who is acknowledging the message.
+         * @param guid The unique identifier of the workspace containing the acknowledged message.
+         * @param msgID The unique identifier of the message being acknowledged.
+         */
         void ackmessage(account_name user,
                         uint64_t guid,
                         uint128_t msgID);
 
         // -------- Files --------
 
+        /**
+         * Adds a new file/version to a workspace.  The uploader must be an active
+         * member of the workspace and have been granted the 'addfile' permission.
+         * If a parentID is specified, A file with that ID must exist in the
+         * workspace.  If ancestorVersionIDs are specified, files with whose
+         * versionIDs must exist in the workspace.
+         *
+         * If there is already a file with the specified fileID in the workspace,
+         * the version ID is required to be unique amongst all versions of the file,
+         * and the ancestorVersionIDs must correspond to existing versions of the file.
+         *
+         * @param uploader The account name of the user who is adding the file/version.
+         * @param guid The unique identifier of the workspace to which the file/version is being added.
+         * @param parentID The unique identifier of the file that is the parent of the new file/version.
+         * @param fileID The unique identifier of the file being added.
+         * @param versionID The unique identifier of the version being added.
+         * @param ancestorVersionIDs The unique identifiers of the versions that are immediate ancestors of this version.
+         * @param fileMetadata The metadata for the added file/version.
+         */
         void addfile(account_name uploader,
                      uint64_t guid,
                      uint128_t parentID,
@@ -91,34 +237,108 @@ namespace secrataContainer {
                      std::vector <uint128_t> ancestorVersionIDs,
                      string fileMetadata);
 
+        /**
+         * Removes a file/version from a workspace.  The remover must be an active
+         * member of the workspace and have been granted the 'removefile' permission.
+         * Specifying a versionID of 0 will cause all versions of the file to be removed.
+         *
+         * @param remover The account name of the user who is removing the file/version.
+         * @param guid The unique identifier of the workspace from which the file/version is being removed.
+         * @param fileID The unique identifier of the file whose version(s) is being removed.
+         * @param versionID The unique identifier of the version that is being removed, or 0 if all versions of the file should be removed.
+         */
         void removefile(account_name remover,
                         uint64_t guid,
                         uint128_t fileID,
                         uint128_t versionID);
 
+        /**
+         * Acknowledges a file version.  The user must be an active member of the workspace.
+         *
+         * @param user The account name of the user who is acknowledging a file version.
+         * @param guid The unique identifier of the workspace in which the file version resides.
+         * @param fileID The unique identifier of the file whose version is being acknowledged.
+         * @param versionID The unique identifier of the version of the that is being acknowledged.
+         */
         void ackfile(account_name user,
                      uint64_t guid,
                      uint128_t fileID,
                      uint128_t versionID);
 
+        /**
+         * Locks a file in a workspace.  Locked files cannot be deleted,
+         * and cannot have new versions uploaded.  The user must be an
+         * active member of the workspace and have been granted the
+         * 'lockfile' permission.
+         *
+         * @param user The account name of the user who is locking the file.
+         * @param guid The unique identifier of the workspace in which the file exists.
+         * @param fileID The unique identifier of the file that is being locked.
+         */
         void lockfile(account_name user,
                       uint64_t guid,
                       uint128_t fileID);
 
+        /**
+         * Locks a specific version of a file.  Locked versions cannot be
+         * deleted.  The user must be an active member of the workspace and
+         * have been granted the 'lockfile' permission.
+         *
+         * @param user The account name of the user who is locking the file.
+         * @param guid The unique identifier of the workspace in which the file exists.
+         * @param fileID The unique identifier of the file that is being locked.
+         * @param versionID The unique identifier of the file version that is being locked.
+         */
         void lockver(account_name user,
                      uint64_t guid,
                      uint128_t fileID,
                      uint128_t versionID);
 
+        /**
+         * Unlocks a locked file in a workspace.  The user must be an
+         * active member of the workspace and either be the current holder
+         * of the file lock, or be the owner of the workspace.
+         *
+         * @param user The account name of the user who is unlocking the file.
+         * @param guid The unique identifier of the workspace in which the file exists.
+         * @param fileID The unique identifier of the file that is being unlocked.
+         */
         void unlockfile(account_name user,
                         uint64_t guid,
                         uint128_t fileID);
 
+        /**
+         * Unlocks a specific version of a file.  The user must be an
+         * active member of the workspace and either be the current holder
+         * of the file version lock, or be the owner of the workspace.
+         *
+         * @param user The account name of the user who is unlocking the file.
+         * @param guid The unique identifier of the workspace in which the file exists.
+         * @param fileID The unique identifier of the file that is being unlocked.
+         * @param versionID The unique identifier of the file version that is being unlocked.
+         */
         void unlockver(account_name user,
                        uint64_t guid,
                        uint128_t fileID,
                        uint128_t versionID);
 
+        /**
+         * Adds a tag to a file version.  Tags can be specified as either
+         * public or private.  Public tags can be removed by any member of
+         * the workspace.  Private tags can only be removed by the user
+         * who created them.  Typically, private tags are only shown to the
+         * user who created them.
+         *
+         * The user must be an active member of the workspace and have been
+         * granted the 'addtag' permission.
+         *
+         * @param user The account name of the user who is adding the tag.
+         * @param guid The unique identifier of the workspace containing the file version being tagged
+         * @param fileID The unique identifier of the file whose version is being tagged.
+         * @param versionID The unique identifier of the file version that is being tagged.
+         * @param isPublic True if the tag is public, otherwise false.
+         * @param value The value of the tag that is being added to the file version.
+         */
         void addtag(account_name user,
                     uint64_t guid,
                     uint128_t fileID,
@@ -126,31 +346,91 @@ namespace secrataContainer {
                     boolean isPublic,
                     string value);
 
+        /**
+         * Removes a tag from a file version.  The user must be an active
+         * member of the workspace and have been granted the 'addtag'
+         * permission in order to remove public tags.  A user can always
+         * remove their private tags.
+         *
+         * @param user The account name of the user who is remove a tag.
+         * @param guid The unique identifier of the workspace contianing the file version being untagged.
+         * @param fileID The unique identifier of the file whose version is being untagged.
+         * @param versionID The unique identifier of the file version that iw being untagged.
+         * @param isPublic True if the tag being removed is public, otherwise false.
+         * @param value The value of the tagthat is being removed from the file version.
+         */
         void removetag(account_name user,
                        uint64_t guid,
                        uint128_t fileID,
                        uint128_t versionID,
-                       boolean isPublic, string value);
+                       boolean isPublic,
+                       string value);
 
         // -------- Permissions --------
 
+        /**
+         * Adds a permission to the target user account.  The user must be an
+         * active member of the workspace and have been granted the 'updateperm'
+         * permission.  The target user must be an active or pending member of
+         * the workspace.
+         *
+         * @param user The account name of the user who is modifying permissions.
+         * @param target The account name of the user to whom the permission is being added.
+         * @param guid The unique identifier of the workspace in which the permission is being granted.
+         * @param permName The name of the permission being granted.
+         * @param scope The scope of the permission being granted.
+         */
         void addperm(account_name user,
                      account_name target,
                      uint64_t guid,
                      string permName,
                      string scope);
 
+        /**
+         * Removes a permission from the target user account.  The user must be an
+         * active member of the workspace and have been granted the 'updateperm'
+         * permission.  The target user must be an active or pending member of
+         * the workspace.
+         *
+         * @param user The account name of the user who is modifying permissions.
+         * @param target The account name of the user from whom the permission is being removed.
+         * @param guid The unique identifier of the workspace in which the permission is being removed.
+         * @param permName The name of the permission being removed.
+         * @param scope The scope of the permission being removed.
+         */
         void removeperm(account_name user,
                         account_name target,
                         uint64_t guid,
                         string permName,
                         string scope);
 
+        /**
+         * Adds a set of permissions to the target user account.  The user
+         * must be an active member of the workspace and have been granted
+         * the 'updateperm' permission.  The target user must be an active
+         * or pending member of the workspace.
+         *
+         * @param user The account name of the user who is modifying permissions.
+         * @param target The account name of the user to whom the permissions are being added.
+         * @param guid The unique identifier of the workspace in which the permissions are being granted.
+         * @param permissions A set of permissions that are being granted to the target user.
+         */
         void addperms(account_name user,
                       account_name target,
                       uint64_t guid,
                       std::vector <userPermission> permissions);
 
+        /**
+         * Removes a set of permissions from the target user account.  The user
+         * must be an active member of the workspace and have been granted
+         * the 'updateperm' permission.  The target user must be an active
+         * or pending member of the workspace.
+         *
+         * @param user The account name of the user who is modifying permissions.
+         * @param target The account name of the user from whom the permissions are being removed.
+         * @param guid The unique identifier of the workspace in which the permissions are being removed.
+         * @param permissions A set of permissions that are being removed from the target user.
+         */
         void removeperms(account_name user,
                          account_name target,
                          uint64_t guid,

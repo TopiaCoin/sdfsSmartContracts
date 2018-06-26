@@ -579,7 +579,7 @@ namespace secrataContainer {
         // Verify that the versions that we will be deleting (either all or a specific one) are not locked.
         while (matchingFile != fileIDIdx.end() && matchingFile->fileID == fileID) {
             if (versionID == 0 || matchingFile->versionID == versionID) {
-                eosio_assert(!entityIsLocked(guid, versionID), "A version of this file is locked.");
+                eosio_assert(!entityIsLocked(guid, matchingFile->versionID), "A version of this file is locked.");
             }
             matchingFile++;
         }
@@ -1149,7 +1149,7 @@ namespace secrataContainer {
         auto matchingLock = lockIdx.lower_bound(user);
 
         while ( matchingLock != lockIdx.end() ) {
-            matchingLock = locks.erase(matchingLock);
+            matchingLock = lockIdx.erase(matchingLock);
         }
     }
 

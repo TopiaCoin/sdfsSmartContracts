@@ -576,10 +576,16 @@ namespace secrataContainer {
         auto fileIDIdx = files.template get_index<N(byfileid)>();
         auto matchingFile = fileIDIdx.lower_bound(fileID);
 
+        std::vector<uint128_t> ancestorIDs;
+
         // Verify that the versions that we will be deleting (either all or a specific one) are not locked.
         while (matchingFile != fileIDIdx.end() && matchingFile->fileID == fileID) {
             if (versionID == 0 || matchingFile->versionID == versionID) {
                 eosio_assert(!entityIsLocked(guid, matchingFile->versionID), "A version of this file is locked.");
+            }
+            if (versionID != 0 && matchingFile->versionID == versionID) {
+                // We are deleting a specific version and this is it.  Grab it's ancestors so that we can use them to fix the ancestry graph later
+                ancestorIDs = std::vector<uint128_t>(matchingFile->parentVersions);
             }
             matchingFile++;
         }
@@ -590,6 +596,21 @@ namespace secrataContainer {
             if (versionID == 0 || matchingFile->versionID == versionID) {
                 matchingFile = fileIDIdx.erase(matchingFile);
             } else {
+                // If matchingFile->parentVersions contains the removed versionID
+                auto verItr = std::find(matchingFile->parentVersions.begin(), matchingFile->parentVersions.end(), versionID);
+                if ( verItr != matchingFile->parentVersions.end() ) {
+                    fileIDIdx.modify(matchingFile, remover, [&](auto& f){
+                        if ( matchingFile->parentVersions.size() == 1) {
+                            f.parentVersions = ancestorIDs;
+                        } else if ( matchingFile->parentVersions.size() > 1){
+                            std::vector<uint128_t> newAncestors(matchingFile->parentVersions);
+                            newAncestors.erase(std::remove(newAncestors.begin(), newAncestors.end(), versionID), newAncestors.end());
+                            f.parentVersions = newAncestors;
+                        }
+                    });
+                    // If matchingFile->parentVersions.size() == 1, then update the matchingFile->parentVersions to be ancestorIDs
+                    // If matchingFile->parentVersions.size() > 1, then remove versionID from matchingFile->parentVersions
+                }
                 matchingFile++;
             }
         }

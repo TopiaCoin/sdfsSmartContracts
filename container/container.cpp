@@ -17,9 +17,9 @@ private:
     };
 
 public:
-	using contract::contract;
+    using contract::contract;
 
-	// -------- Container Actions --------
+    // -------- Container Actions --------
 
     /**
      * Creates a new workspace with the specified GUID, name, and
@@ -32,11 +32,11 @@ public:
      * @param workspaceDescription The description assigned to this workspace.
      * @param key The encrypted workspace key assigned to the creator of this workspace.
      */
-	ACTION create(name owner,
-		uint64_t guid,
-		string workspaceName,
-		string workspaceDescription,
-		string key) {
+    ACTION create(name owner,
+        uint64_t guid,
+        string workspaceName,
+        string workspaceDescription,
+        string key) {
 
         require_auth(owner);
 
@@ -61,7 +61,7 @@ public:
             membership.status = 1;
             membership.key = key;
         });
-	}
+    }
 
     /**
      * Updates the description of a workspace.  In order to update the
@@ -72,9 +72,9 @@ public:
      * @param guid The unique identifier of the workspace whose description is being changed.
      * @param workspaceDescription The new description to be assigned to the workspace.
      */
-	ACTION update (name user,
-		uint64_t guid,
-		string workspaceDescription) {
+    ACTION update (name user,
+        uint64_t guid,
+        string workspaceDescription) {
 
         require_auth(user);
 
@@ -83,7 +83,7 @@ public:
         eosio_assert(userIsMemberOfWorkspace(user, guid, true),
                      "You are not a member of the workspace");
 
-        eosio_assert(userHasPermission(guid, user, name{"updatewks"}.value),
+        eosio_assert(userHasPermission(guid, user, name{"updatewks"}),
                      "User does not have permission to update the workspace");
 
         workspace_index workspaces(_self, guid);
@@ -93,7 +93,7 @@ public:
         workspaces.modify(workspaceItr, user, [&](auto &w) {
             w.description = workspaceDescription;
         });
-	}
+    }
 
     /**
      * Offer ownership of a workspace to another member.  The newowner
@@ -103,8 +103,8 @@ public:
      * @param guid The unique identifier of the workspace whose ownership is being offered.
      * @param newowner The account name of the member who is being offered ownership of the workspace.
      */
-	ACTION offerowner(uint64_t guid,
-		name newowner) {
+    ACTION offerowner(uint64_t guid,
+        name newowner) {
 
         eosio_assert(workspaceExists(guid), "The specified workspace does not exist");
 
@@ -122,7 +122,7 @@ public:
         workspaces.modify(workspaceItr, workspaceItr->owner, [&](auto &w) {
             w.newowner = newowner;
         });
-	}
+    }
 
     /**
      * Accept the offer of ownership for a workspace.  This method can
@@ -131,7 +131,7 @@ public:
      *
      * @param guid  The unique identifier of the workspace whose ownership is being accepted.
      */
-	ACTION acceptowner(uint64_t guid) {
+    ACTION acceptowner(uint64_t guid) {
 
         eosio_assert(workspaceExists(guid), "The specified workspace does not exist");
 
@@ -151,7 +151,7 @@ public:
         });
 
         print("\n");
-	}
+    }
 
     /**
      * Rescind the offer of ownership for a workspace.  This method can
@@ -160,7 +160,7 @@ public:
      *
      * @param guid The unique identifier of the workspace whose ownership offer is being rescinded.
      */
-	ACTION rescindowner(uint64_t guid) {
+    ACTION rescindowner(uint64_t guid) {
 
         eosio_assert(workspaceExists(guid), "The specified workspace does not exist");
 
@@ -173,7 +173,7 @@ public:
         workspaces.modify(workspaceItr, workspaceItr->owner, [&](auto &w) {
             w.newowner = name{0};
         });
-	}
+    }
 
     /**
      * Destorys a workspace and all of its content.  All members are removed
@@ -183,7 +183,7 @@ public:
      *
      * @param guid The unique identifier of the workspace that is being destroyed.
      */
-	ACTION destroy(uint64_t guid) {
+    ACTION destroy(uint64_t guid) {
 
         // Only the owner can destroy the workspace.
         require_auth(getOwner(guid));
@@ -250,9 +250,9 @@ public:
         while (workspaceIdx != workspaces.end()) {
             workspaceIdx = workspaces.erase(workspaceIdx);
         }
-	}
+    }
 
-	// -------- Membership Actions --------
+    // -------- Membership Actions --------
 
     /**
      * Invites a new user to a workspace.  The inviter muse be an active
@@ -269,11 +269,11 @@ public:
      * @param key The workspace key encrypted for the new member.
      * @param permissions The initial set of permissions to assign to the new member.
      */
-	ACTION invite (name inviter, 
-		name invitee,
-		uint64_t guid,
-		string key,
-		std::vector<userPermission> permissions ) {
+    ACTION invite (name inviter, 
+        name invitee,
+        uint64_t guid,
+        string key,
+        std::vector<userPermission> permissions ) {
 
         require_auth(inviter);
 
@@ -286,13 +286,13 @@ public:
         eosio_assert(userIsMemberOfWorkspace(inviter, guid, true),
                      "You are not a member of the workspace");
 
-        eosio_assert(userHasPermission(guid, inviter, name{"invite"}.value, invitee),
+        eosio_assert(userHasPermission(guid, inviter, name{"invite"}, invitee),
                      "User does not have permission to invite users to this workspace");
 
         membership_index memberships(_self, guid);
 
         // Get any existing Membership record for the invitee.
-        auto guidIdx = memberships.template get_index<"byuser"_n>();
+        auto guidIdx = memberships.template get_index<name{"byuser"}>();
         auto matched_guid_itr = guidIdx.lower_bound(invitee.value);
 
         while (matched_guid_itr != guidIdx.end() && matched_guid_itr->user != invitee) {
@@ -318,7 +318,7 @@ public:
         for (userPermission p : permissions) {
             addperm(inviter, invitee, guid, p.permName, p.scope);
         }
-	}
+    }
 
     /**
      * Accept an invitation to a workspace.
@@ -326,8 +326,8 @@ public:
      * @param invitee The account name of the user who is accepting the invitation.
      * @param guid The unique identifier of the workspace whose invite is being accepted.
      */
-	ACTION accept(name invitee,
-		uint64_t guid) {
+    ACTION accept(name invitee,
+        uint64_t guid) {
 
         require_auth(invitee);
 
@@ -340,7 +340,7 @@ public:
         membership_index memberships(_self, guid);
 
         // Get any existing Membership record for the invitee.
-        auto guidIdx = memberships.template get_index<"byuser"_n>();
+        auto guidIdx = memberships.template get_index<name{"byuser"}>();
         auto matched_guid_itr = guidIdx.lower_bound(invitee.value);
 
         while (matched_guid_itr != guidIdx.end() && matched_guid_itr->user != invitee) {
@@ -355,7 +355,7 @@ public:
         guidIdx.modify(matched_guid_itr, invitee, [&](auto &m) {
             m.status = 1;
         });
-	}
+    }
 
     /**
      * Declines an invitation to a workspace.
@@ -363,8 +363,8 @@ public:
      * @param invitee The account name of the user who is declining the invitation.
      * @param guid The unique identifier of the workspace whose invite is being declined.
      */
-	ACTION decline(name invitee,
-		uint64_t guid) {
+    ACTION decline(name invitee,
+        uint64_t guid) {
 
         require_auth(invitee);
 
@@ -377,7 +377,7 @@ public:
         membership_index memberships(_self, guid);
 
         // Get any existing Membership record for the invitee.
-        auto guidIdx = memberships.template get_index<"byuser"_n>();
+        auto guidIdx = memberships.template get_index<name{"byuser"}>();
         auto matched_guid_itr = guidIdx.lower_bound(invitee.value);
 
         while (matched_guid_itr != guidIdx.end() && matched_guid_itr->user != invitee) {
@@ -389,7 +389,7 @@ public:
 
         // Erase the entry for the removed user.
         guidIdx.erase(matched_guid_itr);
-	}
+    }
 
     /**
      * Removes a member from a workspace.  The remover must be an active
@@ -402,9 +402,9 @@ public:
      * @param member The account name of the user who is being removed.
      * @param guid The unique identifier of the workspace from which the user is being removed.
      */
-	ACTION remove(name remover,
-		name member,
-		uint64_t guid) {
+    ACTION remove(name remover,
+        name member,
+        uint64_t guid) {
 
         require_auth(remover);
 
@@ -414,7 +414,7 @@ public:
         eosio_assert(userIsMemberOfWorkspace(remover, guid, true),
                      "You are not a member of the workspace");
 
-        eosio_assert(userHasPermission(guid, remover, name{"remove"}.value, member),
+        eosio_assert(userHasPermission(guid, remover, name{"remove"}, member),
                      "User does not have permission to remove members from the workspace");
 
         eosio_assert(member != getOwner(guid),
@@ -426,7 +426,7 @@ public:
         membership_index memberships(_self, guid);
 
         // Get any existing Membership record for the invitee.
-        auto guidIdx = memberships.template get_index<"byuser"_n>();
+        auto guidIdx = memberships.template get_index<name{"byuser"}>();
         auto matched_guid_itr = guidIdx.lower_bound(member.value);
 
         while (matched_guid_itr != guidIdx.end() && matched_guid_itr->user != member) {
@@ -443,7 +443,7 @@ public:
 
         // Remove all the locks held by the removed user.
         removeAllLocks(guid, member);
-	}
+    }
 
     /**
      * Locks a members record for a workspace.  This prevents the user
@@ -455,9 +455,9 @@ public:
      * @param lockee The account name of the member who is being locked.
      * @param guid The unique identifier of the workspace in which the member is being locked.
      */
-	ACTION lockmember(name locker,
-		name lockee,
-		uint64_t guid) {
+    ACTION lockmember(name locker,
+        name lockee,
+        uint64_t guid) {
 
         require_auth(locker);
 
@@ -467,12 +467,12 @@ public:
         eosio_assert(userIsMemberOfWorkspace(locker, guid, true),
                      "You are not a member of the workspace");
 
-        eosio_assert(userHasPermission(guid, locker, name{"ockuser"}.value, lockee.value),
+        eosio_assert(userHasPermission(guid, locker, name{"ockuser"}, lockee.value),
                      "User does not have permission to remove members from the workspace");
 
         lock_index locks(_self, guid);
 
-        auto lockIdx = locks.template get_index<"byguid"_n>();
+        auto lockIdx = locks.template get_index<name{"byguid"}>();
         auto matchingLock = lockIdx.lower_bound(lockee.value);
 
         if (matchingLock != lockIdx.end() && matchingLock->guid == lockee.value) {
@@ -486,7 +486,7 @@ public:
             l.guid = lockee.value;
             l.lockOwner = locker;
         });
-	}
+    }
 
     /**
      * Unlocks a members record for a workspace.  Once unlocked, the user
@@ -499,9 +499,9 @@ public:
      * @param lockee The account name of the member who is being unlocked.
      * @param guid The unique identifier of the workspace in which the member is being unlocked.
      */
-	ACTION unlockmember(name locker,
-		name lockee,
-		uint64_t guid) {
+    ACTION unlockmember(name locker,
+        name lockee,
+        uint64_t guid) {
 
         require_auth(locker);
 
@@ -511,12 +511,12 @@ public:
         eosio_assert(userIsMemberOfWorkspace(locker, guid, true),
                      "You are not a member of the workspace");
 
-        eosio_assert((locker == lockee) || userHasPermission(guid, locker, name{"lockuser"}.value, lockee),
+        eosio_assert((locker == lockee) || userHasPermission(guid, locker, name{"lockuser"}, lockee),
                      "User does not have permission to remove members from the workspace");
 
         lock_index locks(_self, guid);
 
-        auto lockIdx = locks.template get_index<"byguid"_n>();
+        auto lockIdx = locks.template get_index<name{"byguid"}>();
         auto matchingLock = lockIdx.lower_bound(lockee.value);
 
         if (matchingLock != lockIdx.end() && matchingLock->guid == lockee.value) {
@@ -526,9 +526,9 @@ public:
         }
 
         lockIdx.erase(matchingLock);
-	}
+    }
 
-	// -------- Message Methods --------
+    // -------- Message Methods --------
 
     /**
      * Adds a message to a workspace.  The author must be an active member
@@ -540,10 +540,10 @@ public:
      * @param message The message that is being added to the worksapce.
      * @param mimeType The MIME type of the message (e.g. text/plain).
      */
-	ACTION addmessage(name author,
-		uint64_t guid,
-		string message,
-		string mimeType) {
+    ACTION addmessage(name author,
+        uint64_t guid,
+        string message,
+        string mimeType) {
 
         require_auth(author);
 
@@ -553,7 +553,7 @@ public:
         eosio_assert(userIsMemberOfWorkspace(author, guid, true),
                      "You are not a member of the workspace");
 
-        eosio_assert(userHasPermission(guid, author, name{"addmessage"}.value),
+        eosio_assert(userHasPermission(guid, author, name{"addmessage"}),
                      "User does not have permission to add messages to the workspace");
 
         message_index messages(_self, guid);
@@ -568,7 +568,7 @@ public:
         });
 
 #warning Should the author automatically acknowledge his own message?
-	}
+    }
 
     /**
      * Acknowledges a message in the a workspace.  The user must be an active
@@ -578,9 +578,9 @@ public:
      * @param guid The unique identifier of the workspace containing the acknowledged message.
      * @param msgID The unique identifier of the message being acknowledged.
      */
-	ACTION ackmessage(name user,
-		uint64_t guid,
-		uint128_t msgID) {
+    ACTION ackmessage(name user,
+        uint64_t guid,
+        uint128_t msgID) {
 
         require_auth(user);
 
@@ -593,7 +593,7 @@ public:
         // Make sure the specified message exists in the workspace
 
         message_index messages(_self, guid);
-        auto messageIDIdx = messages.template get_index<"bymsgid"_n>();
+        auto messageIDIdx = messages.template get_index<name{"bymsgid"}>();
         auto existingMessage = messageIDIdx.lower_bound(msgID);
 
         eosio_assert(existingMessage != messageIDIdx.end(),
@@ -603,7 +603,7 @@ public:
 
         messageReceipt_index receipts(_self, guid);
 
-        auto msgIdIdx = receipts.template get_index<"bymsgid"_n>();
+        auto msgIdIdx = receipts.template get_index<name{"bymsgid"}>();
         auto matchMsgIdx = msgIdIdx.lower_bound(msgID);
 
         while (matchMsgIdx != msgIdIdx.end() && matchMsgIdx->msgID == msgID &&
@@ -619,9 +619,9 @@ public:
             r.user = user;
             r.timestamp = now();
         });
-	}
+    }
 
-	// -------- Files --------
+    // -------- Files --------
 
     /**
      * Adds a new file/version to a workspace.  The uploader must be an active
@@ -642,13 +642,13 @@ public:
      * @param ancestorVersionIDs The unique identifiers of the versions that are immediate ancestors of this version.
      * @param fileMetadata The metadata for the added file/version.
      */
-	ACTION addfile(name uploader,
-		uint64_t guid,
-		uint128_t parentID,
-		uint128_t fileID,
-		uint128_t versionID,
-		std::vector<uint128_t> ancestorVersionIDs,
-		string fileMetadata) {
+    ACTION addfile(name uploader,
+        uint64_t guid,
+        uint128_t parentID,
+        uint128_t fileID,
+        uint128_t versionID,
+        std::vector<uint128_t> ancestorVersionIDs,
+        string fileMetadata) {
 
         require_auth(uploader);
 
@@ -658,7 +658,7 @@ public:
         eosio_assert(userIsMemberOfWorkspace(uploader, guid, true),
                      "You are not a member of the workspace");
 
-        eosio_assert(userHasPermission(guid, uploader, name{"addfile"}.value),
+        eosio_assert(userHasPermission(guid, uploader, name{"addfile"}),
                      "User does not have permission to add files to the workspace");
 
         eosio_assert(versionID != 0, "Cannot specify a version ID of 0");
@@ -691,7 +691,7 @@ public:
             f.status = 1;
             f.metadata = fileMetadata;
         });
-	}
+    }
 
     /**
      * Removes a file/version from a workspace.  The remover must be an active
@@ -703,10 +703,10 @@ public:
      * @param fileID The unique identifier of the file whose version(s) is being removed.
      * @param versionID The unique identifier of the version that is being removed, or 0 if all versions of the file should be removed.
      */
-	ACTION removefile(name remover,
-		uint64_t guid,
-		uint128_t fileID,
-		uint128_t versionID) {
+    ACTION removefile(name remover,
+        uint64_t guid,
+        uint128_t fileID,
+        uint128_t versionID) {
 
         require_auth(remover);
 
@@ -716,7 +716,7 @@ public:
         eosio_assert(userIsMemberOfWorkspace(remover, guid, true),
                      "You are not a member of the workspace");
 
-        eosio_assert(userHasPermission(guid, remover, name{"removefile"}.value),
+        eosio_assert(userHasPermission(guid, remover, name{"removefile"}),
                      "User does not have permission to remove files from the workspace");
 
         eosio_assert(fileExistsInWorkspace(fileID, guid), "The specified file does not exist in this workspace");
@@ -729,7 +729,7 @@ public:
 
         file_index files(_self, guid);
 
-        auto fileIDIdx = files.template get_index<"byfileid"_n>();
+        auto fileIDIdx = files.template get_index<name{"byfileid"}>();
         auto matchingFile = fileIDIdx.lower_bound(fileID);
 
         std::vector<uint128_t> ancestorIDs;
@@ -772,7 +772,7 @@ public:
         }
 
 #warning Consider cascade deletion of child entries
-	}
+    }
 
     /**
      * Acknowledges a file version.  The user must be an active member of the workspace.
@@ -782,10 +782,10 @@ public:
      * @param fileID The unique identifier of the file whose version is being acknowledged.
      * @param versionID The unique identifier of the version of the that is being acknowledged.
      */
-	ACTION ackfile (name user,
-		uint64_t guid,
-		uint128_t fileID,
-		uint128_t versionID) {
+    ACTION ackfile (name user,
+        uint64_t guid,
+        uint128_t fileID,
+        uint128_t versionID) {
 
         require_auth(user);
 
@@ -802,7 +802,7 @@ public:
 
         fileReceipt_index fileReceipts(_self, guid);
 
-        auto receiptIdx = fileReceipts.template get_index<"byfileid"_n>();
+        auto receiptIdx = fileReceipts.template get_index<name{"byfileid"}>();
         auto matchingReceipt = receiptIdx.lower_bound(fileID);
 
         // Advance to the first entry matching the specified versionID
@@ -821,7 +821,7 @@ public:
             r.user = user;
             r.timestamp = now();
         });
-	}
+    }
 
     /**
      * Locks a file in a workspace.  Locked files cannot be deleted,
@@ -833,9 +833,9 @@ public:
      * @param guid The unique identifier of the workspace in which the file exists.
      * @param fileID The unique identifier of the file that is being locked.
      */
-	ACTION lockfile (name user,
-		uint64_t guid,
-		uint128_t fileID) {
+    ACTION lockfile (name user,
+        uint64_t guid,
+        uint128_t fileID) {
 
         require_auth(user);
 
@@ -848,12 +848,12 @@ public:
         eosio_assert(fileExistsInWorkspace(fileID, guid),
                      "The specified file does not exist in this workspace");
 
-        eosio_assert(userHasPermission(guid, user, name{"lockfile"}.value),
+        eosio_assert(userHasPermission(guid, user, name{"lockfile"}),
                      "User does not have permission to lock files in the workspace");
 
         lock_index locks(_self, guid);
 
-        auto lockIdx = locks.template get_index<"byguid"_n>();
+        auto lockIdx = locks.template get_index<name{"byguid"}>();
         auto matchingLock = lockIdx.lower_bound(fileID);
 
         if (matchingLock != lockIdx.end() && matchingLock->guid == fileID) {
@@ -866,7 +866,7 @@ public:
             l.guid = fileID;
             l.lockOwner = user;
         });
-	}
+    }
 
     /**
      * Locks a specific version of a file.  Locked versions cannot be
@@ -878,10 +878,10 @@ public:
      * @param fileID The unique identifier of the file that is being locked.
      * @param versionID The unique identifier of the file version that is being locked.
      */
-	ACTION lockver(name user,
-		uint64_t guid,
-		uint128_t fileID,
-		uint128_t versionID) {
+    ACTION lockver(name user,
+        uint64_t guid,
+        uint128_t fileID,
+        uint128_t versionID) {
 
         require_auth(user);
 
@@ -894,12 +894,12 @@ public:
         eosio_assert(fileVersionExistsInWorkspace(fileID, versionID, guid),
                      "The specified file version does not exist in this workspace");
 
-        eosio_assert(userHasPermission(guid, user, name{"lockfile"}.value),
+        eosio_assert(userHasPermission(guid, user, name{"lockfile"}),
                      "User does not have permission to lock files in the workspace");
 
         lock_index locks(_self, guid);
 
-        auto lockIdx = locks.template get_index<"byguid"_n>();
+        auto lockIdx = locks.template get_index<name{"byguid"}>();
         auto matchingLock = lockIdx.lower_bound(versionID);
 
         if (matchingLock != lockIdx.end() && matchingLock->guid == versionID) {
@@ -912,7 +912,7 @@ public:
             l.guid = versionID;
             l.lockOwner = user;
         });
-	}
+    }
 
     /**
      * Unlocks a locked file in a workspace.  The user must be an
@@ -923,9 +923,9 @@ public:
      * @param guid The unique identifier of the workspace in which the file exists.
      * @param fileID The unique identifier of the file that is being unlocked.
      */
-	ACTION unlockfile (name user,
-		uint64_t guid,
-		uint128_t fileID) {
+    ACTION unlockfile (name user,
+        uint64_t guid,
+        uint128_t fileID) {
 
         require_auth(user);
 
@@ -940,7 +940,7 @@ public:
 
         lock_index locks(_self, guid);
 
-        auto lockIdx = locks.template get_index<"byguid"_n>();
+        auto lockIdx = locks.template get_index<name{"byguid"}>();
         auto matchingLock = lockIdx.lower_bound(fileID);
 
         if (matchingLock != lockIdx.end() && matchingLock->guid == fileID) {
@@ -949,7 +949,7 @@ public:
         }
 
         lockIdx.erase(matchingLock);
-	}
+    }
 
     /**
      * Unlocks a specific version of a file.  The user must be an
@@ -961,10 +961,10 @@ public:
      * @param fileID The unique identifier of the file that is being unlocked.
      * @param versionID The unique identifier of the file version that is being unlocked.
      */
-	ACTION unlockver (name user,
-		uint64_t guid,
-		uint128_t fileID,
-		uint128_t versionID) {
+    ACTION unlockver (name user,
+        uint64_t guid,
+        uint128_t fileID,
+        uint128_t versionID) {
 
         print(" ");
         require_auth(user);
@@ -980,7 +980,7 @@ public:
 
         lock_index locks(_self, guid);
 
-        auto lockIdx = locks.template get_index<"byguid"_n>();
+        auto lockIdx = locks.template get_index<name{"byguid"}>();
         auto matchingLock = lockIdx.lower_bound(versionID);
 
         if (matchingLock != lockIdx.end() && matchingLock->guid == versionID) {
@@ -989,7 +989,7 @@ public:
         }
 
         lockIdx.erase(matchingLock);
-	}
+    }
 
     /**
      * Adds a tag to a file version.  Tags can be specified as either
@@ -1008,12 +1008,12 @@ public:
      * @param isPublic True if the tag is public, otherwise false.
      * @param value The value of the tag that is being added to the file version.
      */
-	ACTION addtag (name user,
-		uint64_t guid,
-		uint128_t fileID,
-		uint128_t versionID,
-		boolean isPublic,
-		string value) {
+    ACTION addtag (name user,
+        uint64_t guid,
+        uint128_t fileID,
+        uint128_t versionID,
+        boolean isPublic,
+        string value) {
 
         require_auth(user);
 
@@ -1025,17 +1025,17 @@ public:
 
         eosio_assert(fileExistsInWorkspace(fileID, guid), "The specified file does not exist in this workspace");
 
-        eosio_assert(userHasPermission(guid, user, name{"addtag"}.value),
+        eosio_assert(userHasPermission(guid, user, name{"addtag"}),
                      "User does not have permission to add file tags in the workspace");
 
         fileTag_index fileTags(_self, guid);
 
-        auto fileIDIdx = fileTags.template get_index<"byverid"_n>();
+        auto fileIDIdx = fileTags.template get_index<name{"byverid"}>();
         auto matchingTag = fileIDIdx.lower_bound(versionID);
 
         uint64_t targetScope = user.value;
         if (isPublic) {
-            targetScope = "public"_n.value;
+            targetScope = name{"public"}.value;
         }
 
         cout << ((const char *) "Target Scope: ") << targetScope << ((const char *) "\n");
@@ -1053,7 +1053,7 @@ public:
             t.scope = targetScope;
             t.value = value;
         });
-	}
+    }
 
     /**
      * Removes a tag from a file version.  The user must be an active
@@ -1068,12 +1068,12 @@ public:
      * @param isPublic True if the tag being removed is public, otherwise false.
      * @param value The value of the tagthat is being removed from the file version.
      */
-	ACTION removetag(name user,
-		uint64_t guid,
-		uint128_t fileID,
-		uint128_t versionID,
-		boolean isPublic, 
-		string value ) {
+    ACTION removetag(name user,
+        uint64_t guid,
+        uint128_t fileID,
+        uint128_t versionID,
+        boolean isPublic, 
+        string value ) {
 
         require_auth(user);
 
@@ -1086,18 +1086,18 @@ public:
         eosio_assert(fileExistsInWorkspace(fileID, guid), "The specified file does not exist in this workspace");
 
         if (isPublic) {
-            eosio_assert(userHasPermission(guid, user, name{"addtag"}.value),
+            eosio_assert(userHasPermission(guid, user, name{"addtag"}),
                          "User does not have permission to remove file tags in the workspace");
         }
 
         fileTag_index fileTags(_self, guid);
 
-        auto fileIDIdx = fileTags.template get_index<"byverid"_n>();
+        auto fileIDIdx = fileTags.template get_index<name{"byverid"}>();
         auto matchingTag = fileIDIdx.lower_bound(versionID);
 
         uint64_t targetScope = user.value;
         if (isPublic) {
-            targetScope = "public"_n.value;
+            targetScope = name{"public"}.value;
         }
 
         cout << ((const char *) "Target Scope: ") << targetScope << ((const char *) "\n");
@@ -1110,9 +1110,9 @@ public:
         eosio_assert(matchingTag != fileIDIdx.end(), "The specified tag does not exist");
 
         fileIDIdx.erase(matchingTag);
-	}
+    }
 
-	// -------- Permission Methods --------
+    // -------- Permission Methods --------
 
     /**
      * Adds a permission to the target user account.  The user must be an
@@ -1126,11 +1126,11 @@ public:
      * @param permName The name of the permission being granted.
      * @param scope The scope of the permission being granted.
      */
-	ACTION addperm(name user,
-		name target,
-		uint64_t guid,
-		string permName,
-		string scope) {
+    ACTION addperm(name user,
+        name target,
+        uint64_t guid,
+        string permName,
+        string scope) {
 
         require_auth(user);
 
@@ -1140,13 +1140,13 @@ public:
         eosio_assert(userIsMemberOfWorkspace(user, guid, true),
                      "You are not a member of the workspace");
 
-        eosio_assert(userHasPermission(guid, user, name{"updateperm"}.value, target),
+        eosio_assert(userHasPermission(guid, user, name{"updateperm"}, target),
                      "User does not have permission to modify user permissions in the workspace");
 
         if (internalAddPerm(user, target, guid, permName, scope)) {
             print("Added Permissions\n");
         }
-	}
+    }
 
     /**
      * Removes a permission from the target user account.  The user must be an
@@ -1160,11 +1160,11 @@ public:
      * @param permName The name of the permission being removed.
      * @param scope The scope of the permission being removed.
      */
-	ACTION removeperm(name user,
-		name target,
-		uint64_t guid,
-		string permName,
-		string scope) {
+    ACTION removeperm(name user,
+        name target,
+        uint64_t guid,
+        string permName,
+        string scope) {
 
         require_auth(user);
 
@@ -1174,13 +1174,13 @@ public:
         eosio_assert(userIsMemberOfWorkspace(user, guid, true),
                      "You are not a member of the workspace");
 
-        eosio_assert(userHasPermission(guid, user, name{"updateperm"}.value, target),
+        eosio_assert(userHasPermission(guid, user, name{"updateperm"}, target),
                      "User does not have permission to modify user permissions in the workspace");
 
         if (internalRemovePerm(user, target, guid, permName, scope)) {
             print("Removed Permission");
         }
-	}
+    }
 
     /**
      * Adds a set of permissions to the target user account.  The user
@@ -1193,10 +1193,10 @@ public:
      * @param guid The unique identifier of the workspace in which the permissions are being granted.
      * @param permissions A set of permissions that are being granted to the target user.
      */
-	ACTION addperms(name user,
-		name target,
-		uint64_t guid,
-		std::vector<userPermission> permissions) {
+    ACTION addperms(name user,
+        name target,
+        uint64_t guid,
+        std::vector<userPermission> permissions) {
 
         require_auth(user);
 
@@ -1212,13 +1212,13 @@ public:
         eosio_assert(is_account(target),
                      "The target user account does not exist");
 
-        eosio_assert(userHasPermission(guid, user, name{"updateperm"}.value, target),
+        eosio_assert(userHasPermission(guid, user, name{"updateperm"}, target),
                      "You do not have permission to modify user permissions in the workspace");
 
         for (userPermission p : permissions) {
             internalAddPerm(user, target, guid, p.permName, p.scope);
         }
-	}
+    }
 
     /**
      * Removes a set of permissions from the target user account.  The user
@@ -1231,10 +1231,10 @@ public:
      * @param guid The unique identifier of the workspace in which the permissions are being removed.
      * @param permissions A set of permissions that are being removed from the target user.
      */
-	ACTION removeperms(name user,
-		name target,
-		uint64_t guid,
-		std::vector<userPermission> permissions) {
+    ACTION removeperms(name user,
+        name target,
+        uint64_t guid,
+        std::vector<userPermission> permissions) {
 
         require_auth(user);
 
@@ -1244,32 +1244,32 @@ public:
         eosio_assert(userIsMemberOfWorkspace(user, guid, true),
                      "You are not a member of the workspace");
 
-        eosio_assert(userHasPermission(guid, user, name{"updateperm"}.value, target),
+        eosio_assert(userHasPermission(guid, user, name{"updateperm"}, target),
                      "User does not have permission to modify user permissions in the workspace");
 
         for (userPermission p : permissions) {
             internalRemovePerm(user, target, guid, p.permName, p.scope);
         }
-	}
+    }
 
 private:
 
-	boolean internalAddPerm(name user,
-		name target,
-		uint64_t guid,
-		string permName, 
-		string scope) {
+    boolean internalAddPerm(name user,
+        name target,
+        uint64_t guid,
+        string permName, 
+        string scope) {
 
         boolean added = false;
 
-        uint64_t permType = name{permName.c_str()}.value;
+        name permType = name{permName.c_str()};
 
-        uint128_t key = permType;
+        uint128_t key = permType.value;
         key = key << 64 | target.value;
 
         permission_index permissions(_self, guid);
 
-        auto permUserIdx = permissions.template get_index<"bypermuser"_n>();
+        auto permUserIdx = permissions.template get_index<name{"bypermuser"}>();
         auto matchingPerm = permUserIdx.lower_bound(key);
 
         while (matchingPerm != permUserIdx.end() && matchingPerm->permissionType == permType &&
@@ -1290,24 +1290,24 @@ private:
         }
 
         return added;
-	}
+    }
 
-	boolean internalRemovePerm(name user,
-		name target,
-		uint64_t guid,
-		string permName,
-		string scope) {
+    boolean internalRemovePerm(name user,
+        name target,
+        uint64_t guid,
+        string permName,
+        string scope) {
 
         boolean removed = false;
 
-        uint64_t permType = name{permName.c_str()}.value;
+        name permType = name{permName.c_str()};
 
-        uint128_t key = permType;
+        uint128_t key = permType.value;
         key = key << 64 | target.value;
 
         permission_index permissions(_self, guid);
 
-        auto permUserIdx = permissions.template get_index<"bypermuser"_n>();
+        auto permUserIdx = permissions.template get_index<name{"bypermuser"}>();
         auto matchingPerm = permUserIdx.lower_bound(key);
 
         while (matchingPerm != permUserIdx.end() && matchingPerm->permissionType == permType &&
@@ -1321,20 +1321,20 @@ private:
         }
 
         return removed;
-	}
+    }
 
-	// -------- Utility Methods --------
+    // -------- Utility Methods --------
 
-	boolean workspaceExists(uint64_t guid) {
+    boolean workspaceExists(uint64_t guid) {
 
         workspace_index workspaces(_self, guid);
 
         // This workspace exists if there is an entry in the workspace guid scoped table.
 
         return (workspaces.begin() != workspaces.end());
-	}
+    }
 
-	boolean userIsMemberOfWorkspace(name user, uint64_t guid, boolean isActive) {
+    boolean userIsMemberOfWorkspace(name user, uint64_t guid, boolean isActive) {
 
         membership_index memberships(_self, guid);
 
@@ -1342,7 +1342,7 @@ private:
         // specified guid, then iterate through until we either find an entry for the user, or the iterator's
         // guid does not match the search guid.
 
-        auto guidIdx = memberships.template get_index<"byuser"_n>();
+        auto guidIdx = memberships.template get_index<name{"byuser"}>();
         auto matched_guid_itr = guidIdx.lower_bound(user.value);
 
         boolean found = false;
@@ -1353,23 +1353,23 @@ private:
         }
 
         return found;
-	}
+    }
 
-	boolean fileExistsInWorkspace(uint128_t fileID, uint64_t guid) {
+    boolean fileExistsInWorkspace(uint128_t fileID, uint64_t guid) {
 
         file_index files(_self, guid);
 
-        auto fileIDIdx = files.template get_index<"byfileid"_n>();
+        auto fileIDIdx = files.template get_index<name{"byfileid"}>();
         auto matchedFileID = fileIDIdx.lower_bound(fileID);
 
         return (matchedFileID != fileIDIdx.end());
-	}
+    }
 
-	boolean fileVersionExistsInWorkspace(uint128_t fileID, uint128_t versionID, uint64_t guid) {
+    boolean fileVersionExistsInWorkspace(uint128_t fileID, uint128_t versionID, uint64_t guid) {
 
         file_index files(_self, guid);
 
-        auto fileIDIdx = files.template get_index<"byfileid"_n>();
+        auto fileIDIdx = files.template get_index<name{"byfileid"}>();
         auto matchedFileID = fileIDIdx.lower_bound(fileID);
 
         boolean found = false;
@@ -1380,23 +1380,23 @@ private:
         }
 
         return found;
-	}
+    }
 
-	name getOwner(uint64_t guid) {
+    name getOwner(uint64_t guid) {
 
         workspace_index workspaces(_self, guid);
 
         auto workspaceItr = workspaces.begin();
 
         return (workspaceItr != workspaces.end() ? workspaceItr->owner : name{0});
-	}
+    }
 
-	boolean userHasPermission(uint64_t guid, name user, uint64_t permType) {
+    boolean userHasPermission(uint64_t guid, name user, name permType) {
 
         return userHasPermission(guid, user, permType, "");
-	}
+    }
 
-	boolean userHasPermission(uint64_t guid, name user, uint64_t permType, uint128_t scope) {
+    boolean userHasPermission(uint64_t guid, name user, name permType, uint128_t scope) {
 
 #warning This code needs to be re-implemented
         // std::stringstream ss;
@@ -1404,22 +1404,22 @@ private:
         // string scopeStr = ss.str();
         // return userHasPermission(guid, user, permType, scopeStr);
         return false ;
-	}
+    }
 
-	boolean userHasPermission(uint64_t guid, name user, uint64_t permType, name scope) {
+    boolean userHasPermission(uint64_t guid, name user, name permType, name scope) {
 
         string scopeStr = scope.to_string();
         return userHasPermission(guid, user, permType, scopeStr);
-	}
+    }
 
-	boolean userHasPermission(uint64_t guid, name user, uint64_t permType, string scope) {
+    boolean userHasPermission(uint64_t guid, name user, name permType, string scope) {
 
         permission_index permissions(_self, guid);
 
-        uint128_t key = permType;
+        uint128_t key = permType.value;
         key = key << 64 | user.value;
 
-        auto permUserIdx = permissions.template get_index<"bypermuser"_n>();
+        auto permUserIdx = permissions.template get_index<name{"bypermuser"}>();
         auto matchingPerm = permUserIdx.lower_bound(key);
 
         // The owner of a workspace implicitly has all permissions on the workspace.
@@ -1432,131 +1432,131 @@ private:
         }
 
         return hasPerm;
-	}
+    }
 
-	boolean userOwnsWorkspace(uint64_t guid, name user) {
+    boolean userOwnsWorkspace(uint64_t guid, name user) {
 
         workspace_index workspaces(_self, guid);
 
         auto workspaceInfo = workspaces.begin();
 
         return (workspaceInfo != workspaces.end() && workspaceInfo->owner == user);
-	}
+    }
 
-	void removeAllUserPermissions(uint64_t guid, name user) {
+    void removeAllUserPermissions(uint64_t guid, name user) {
 
         permission_index permissions(_self, guid);
 
-        auto nameIdx = permissions.template get_index<"byuser"_n>();
+        auto nameIdx = permissions.template get_index<name{"byuser"}>();
         auto matchingPerm = nameIdx.lower_bound(user.value);
 
         while (matchingPerm != nameIdx.end() && matchingPerm->user == user) {
             matchingPerm = nameIdx.erase(matchingPerm);
         }
-	}
+    }
 
-	void removeAllLocks(uint64_t guid, name user) {
+    void removeAllLocks(uint64_t guid, name user) {
 
         lock_index locks(_self, guid);
 
-        auto lockIdx = locks.template get_index<"bylockowner"_n>();
+        auto lockIdx = locks.template get_index<name{"bylockowner"}>();
         auto matchingLock = lockIdx.lower_bound(user.value);
 
         while ( matchingLock != lockIdx.end() ) {
             matchingLock = lockIdx.erase(matchingLock);
         }
-	}
+    }
 
-	boolean entityIsLocked(uint64_t guid, uint128_t entityGuid) {
+    boolean entityIsLocked(uint64_t guid, uint128_t entityGuid) {
 
         lock_index locks(_self, guid);
 
-        auto lockIdx = locks.template get_index<"byguid"_n>();
+        auto lockIdx = locks.template get_index<name{"byguid"}>();
         auto matchingLock = lockIdx.lower_bound(entityGuid);
 
         return (matchingLock != lockIdx.end() && matchingLock->guid == entityGuid);
-	}
+    }
 
-	boolean entityIsLockedByUser(uint64_t guid, uint128_t entityGuid, name user) {
+    boolean entityIsLockedByUser(uint64_t guid, uint128_t entityGuid, name user) {
 
         lock_index locks(_self, guid);
 
-        auto lockIdx = locks.template get_index<"byguid"_n>();
+        auto lockIdx = locks.template get_index<name{"byguid"}>();
         auto matchingLock = lockIdx.lower_bound(entityGuid);
 
         return (matchingLock != lockIdx.end() && matchingLock->guid == entityGuid && matchingLock->lockOwner == user);
-	}
+    }
 
-	// -------- TABLE Worksapce --------
+    // -------- TABLE Worksapce --------
 
-	TABLE workspace {
-		uint64_t id;
-		string name;
-		string description;
-		eosio::name owner;
-		eosio::name newowner;
+    TABLE workspace {
+        uint64_t id;
+        string name;
+        string description;
+        eosio::name owner;
+        eosio::name newowner;
 
-		uint64_t primary_key() const { return id; }
-	};
+        uint64_t primary_key() const { return id; }
+    };
 
-	typedef multi_index<"workspace"_n, workspace>
-		workspace_index;
+    typedef multi_index<name{"workspace"}, workspace>
+        workspace_index;
 
-	// -------- TABLE Membership --------
+    // -------- TABLE Membership --------
 
-	TABLE membership {
-		uint64_t id;
-		name inviter;
-		name user;
-		uint8_t status;
-		string key;
+    TABLE membership {
+        uint64_t id;
+        name inviter;
+        name user;
+        uint8_t status;
+        string key;
 
-		uint64_t primary_key() const { return id; }
+        uint64_t primary_key() const { return id; }
 
-		uint64_t get_user() const { return user.value ; }		
-	};
+        uint64_t get_user() const { return user.value ; }       
+    };
 
-	typedef multi_index<"membership"_n, membership,
-			indexed_by < "byuser"_n, const_mem_fun < membership, uint64_t, &membership::get_user> > >
-		membership_index;
+    typedef multi_index<name{"membership"}, membership,
+            indexed_by < name{"byuser"}, const_mem_fun < membership, uint64_t, &membership::get_user> > >
+        membership_index;
 
-	// -------- TABLE Messages --------
+    // -------- TABLE Messages --------
 
-	TABLE message {
-		uint64_t id;
-		uint128_t msgID;
-		name author;
-		string text;
-		uint64_t timestamp;
-		string mimeType;
+    TABLE message {
+        uint64_t id;
+        uint128_t msgID;
+        name author;
+        string text;
+        uint64_t timestamp;
+        string mimeType;
 
-		uint64_t primary_key() const { return id ; }
+        uint64_t primary_key() const { return id ; }
 
-		uint128_t get_msgID() const { return msgID; } 
-	};
+        uint128_t get_msgID() const { return msgID; } 
+    };
 
-	typedef multi_index< "messages"_n, message,
-			indexed_by < "bymsgid"_n, const_mem_fun < message, uint128_t, &message::get_msgID> > >
-		message_index;
+    typedef multi_index< name{"messages"}, message,
+            indexed_by < name{"bymsgid"}, const_mem_fun < message, uint128_t, &message::get_msgID> > >
+        message_index;
 
-	// -------- TABLE Message Receipts --------
+    // -------- TABLE Message Receipts --------
 
-	TABLE messageReceipt {
-		uint64_t id;
-		uint128_t msgID;
-		name user;
-		uint64_t timestamp;
+    TABLE messageReceipt {
+        uint64_t id;
+        uint128_t msgID;
+        name user;
+        uint64_t timestamp;
 
-		uint64_t primary_key() const { return id ; }
+        uint64_t primary_key() const { return id ; }
 
-		uint128_t get_msgID() const { return msgID ; }
-	};
+        uint128_t get_msgID() const { return msgID ; }
+    };
 
-	typedef multi_index< "msgreceipts"_n, messageReceipt,
-			indexed_by < "bymsgid"_n, const_mem_fun < messageReceipt, uint128_t, &messageReceipt::get_msgID> > >
-		messageReceipt_index;
+    typedef multi_index< name{"msgreceipts"}, messageReceipt,
+            indexed_by < name{"bymsgid"}, const_mem_fun < messageReceipt, uint128_t, &messageReceipt::get_msgID> > >
+        messageReceipt_index;
 
-	// -------- TABLE Files --------
+    // -------- TABLE Files --------
 
     TABLE file {
         uint64_t id;
@@ -1575,11 +1575,11 @@ private:
         uint128_t get_fileID() const { return fileID; }
     };
 
-    typedef eosio::multi_index<"files"_n, file,
-            indexed_by < "byfileid"_n, const_mem_fun < file, uint128_t, &file::get_fileID> > >
-    	file_index;
+    typedef eosio::multi_index<name{"files"}, file,
+            indexed_by < name{"byfileid"}, const_mem_fun < file, uint128_t, &file::get_fileID> > >
+        file_index;
 
-	// -------- TABLE File Receipts --------
+    // -------- TABLE File Receipts --------
 
     TABLE fileReceipt {
         uint64_t id;
@@ -1593,11 +1593,11 @@ private:
         uint128_t get_fileID() const { return fileID; }
     };
 
-    typedef eosio::multi_index<"filereceipts"_n, fileReceipt,
-            indexed_by < "byfileid"_n, const_mem_fun < fileReceipt, uint128_t, &fileReceipt::get_fileID> > >
-    	fileReceipt_index;
+    typedef eosio::multi_index<name{"filereceipts"}, fileReceipt,
+            indexed_by < name{"byfileid"}, const_mem_fun < fileReceipt, uint128_t, &fileReceipt::get_fileID> > >
+        fileReceipt_index;
 
-	// -------- TABLE File Tags --------
+    // -------- TABLE File Tags --------
 
     TABLE fileTag {
         uint64_t id;
@@ -1613,23 +1613,23 @@ private:
         uint128_t get_versionID() const { return versionID; }
     };
 
-    typedef eosio::multi_index<"filetags"_n, fileTag,
-            indexed_by < "byfileid"_n, const_mem_fun < fileTag, uint128_t, &fileTag::get_fileID> >,
-    		indexed_by<"byverid"_n, const_mem_fun < fileTag, uint128_t, &fileTag::get_versionID> > >
-    	fileTag_index;
+    typedef eosio::multi_index<name{"filetags"}, fileTag,
+            indexed_by < name{"byfileid"}, const_mem_fun < fileTag, uint128_t, &fileTag::get_fileID> >,
+            indexed_by<name{"byverid"}, const_mem_fun < fileTag, uint128_t, &fileTag::get_versionID> > >
+        fileTag_index;
 
-	// -------- TABLE Permissions --------
+    // -------- TABLE Permissions --------
 
     TABLE permission {
         uint64_t id;
-        uint64_t permissionType;
+        name permissionType;
         name user;
         string scope;
 
         uint64_t primary_key() const { return id; }
 
         uint128_t get_permType_user() const {
-            uint128_t key = permissionType;
+            uint128_t key = permissionType.value;
             key = key << 64 | user.value;
             return key;
         }
@@ -1637,12 +1637,12 @@ private:
         uint64_t get_user() const { return user.value; }
     };
 
-    typedef eosio::multi_index<"permissions"_n, permission,
-            indexed_by < "byuser"_n, const_mem_fun < permission, uint64_t, &permission::get_user> >,
-    		indexed_by<"bypermuser"_n, const_mem_fun < permission, uint128_t, &permission::get_permType_user> > >
-    	permission_index;
+    typedef eosio::multi_index<name{"permissions"}, permission,
+            indexed_by < name{"byuser"}, const_mem_fun < permission, uint64_t, &permission::get_user> >,
+            indexed_by<name{"bypermuser"}, const_mem_fun < permission, uint128_t, &permission::get_permType_user> > >
+        permission_index;
 
-	// -------- TABLE Locks --------
+    // -------- TABLE Locks --------
 
     TABLE lock {
         uint64_t id;
@@ -1656,10 +1656,10 @@ private:
         uint64_t get_lockOwner() const { return lockOwner.value; }
     };
 
-    typedef eosio::multi_index<"locks"_n, lock,
-            indexed_by < "byguid"_n, const_mem_fun < lock, uint128_t, &lock::get_guid> >,
-    		indexed_by < "bylockowner"_n, const_mem_fun < lock, uint64_t, &lock::get_lockOwner> > >
-    	lock_index;
+    typedef eosio::multi_index<name{"locks"}, lock,
+            indexed_by < name{"byguid"}, const_mem_fun < lock, uint128_t, &lock::get_guid> >,
+            indexed_by < name{"bylockowner"}, const_mem_fun < lock, uint64_t, &lock::get_lockOwner> > >
+        lock_index;
 
 };
 
@@ -1667,4 +1667,4 @@ EOSIO_DISPATCH( container, (create)(update)(invite)(accept)(decline)
         (remove)(lockmember)(unlockmember)(addmessage)(ackmessage)(addfile)(removefile)
         (ackfile)(addtag)(removetag)(lockfile)(unlockfile)(lockver)(unlockver)(addperm)
         (removeperm)(addperms)(removeperms)(offerowner)(acceptowner)(rescindowner)
-		(destroy) )
+        (destroy) )
